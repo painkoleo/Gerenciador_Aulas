@@ -1,35 +1,39 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Ookii.Dialogs.Wpf; // diálogo de pasta moderno WPF
+using System.Windows.Media;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using Newtonsoft.Json;
+using Ookii.Dialogs.Wpf;
 
 namespace GerenciadorAulas
 {
-    public class AulaItem
-    {
-        public string Nome { get; set; } = "";
-        public string Caminho { get; set; } = "";
-        public List<AulaItem> SubItens { get; set; } = new List<AulaItem>();
-        public bool ÉModulo => SubItens.Count > 0;
-        public bool Assistido { get; set; } = false;
-    }
-
     public partial class MainWindow : Window
     {
-        private List<AulaItem> rootData = new List<AulaItem>();
+        private HashSet<string> videosAssistidos = new HashSet<string>();
+        private string estadoArquivo = "videos_assistidos.json";
+
+        public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
+
+        public RelayCommand<string?> PlayCommand { get; }
 
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = this;
+
+            // Corrigido para string? (null-safe)
+            PlayCommand = new RelayCommand<string?>(AbrirVideoMPV);
+
+            CarregarEstado();
         }
 
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
         {
-            // Diálogo moderno WPF
             var dialog = new VistaFolderBrowserDialog
             {
                 Description = "Selecione a pasta principal",
@@ -41,110 +45,154 @@ namespace GerenciadorAulas
             string path = dialog.SelectedPath;
             txtFolderPath.Text = path;
 
+            TreeRoot.Clear();
+            AtualizarProgresso();
+
             try
             {
-                rootData = CarregarPastas(path);
-                treeModules.Items.Clear();
-
-                foreach (var item in rootData)
-                    treeModules.Items.Add(CriarTreeViewItem(item));
+                CarregarPasta(path, TreeRoot);
+                AtualizarProgresso();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao carregar pastas: {ex.Message}");
+                MessageBox.Show($"Erro ao carregar a pasta: {ex.Message}");
             }
         }
 
-        private List<AulaItem> CarregarPastas(string path)
+        private void CarregarPasta(string path, ObservableCollection<object> parent)
         {
-            var lista = new List<AulaItem>();
+            if (!Directory.Exists(path)) return;
 
-            try
-            {
-                // Pastas
-                var dirs = Directory.GetDirectories(path)
-                    .OrderBy(d => int.TryParse(new string(Path.GetFileName(d).TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue)
-                    .ThenBy(d => Path.GetFileName(d));
-
-                foreach (var dir in dirs)
+            // Pastas
+            var pastas = Directory.GetDirectories(path)
+                .OrderBy(d =>
                 {
-                    var item = new AulaItem { Nome = Path.GetFileName(dir), Caminho = dir };
-                    item.SubItens = CarregarPastas(dir);
-                    lista.Add(item);
-                }
+                    string name = Path.GetFileName(d) ?? "";
+                    return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+                })
+                .ThenBy(d => Path.GetFileName(d));
 
-                // Arquivos de vídeo
-                var files = Directory.GetFiles(path)
-                    .Where(f => new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(f).ToLower()))
-                    .OrderBy(f => int.TryParse(new string(Path.GetFileNameWithoutExtension(f).TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue)
-                    .ThenBy(f => Path.GetFileName(f));
-
-                foreach (var file in files)
-                    lista.Add(new AulaItem { Nome = Path.GetFileName(file), Caminho = file });
-            }
-            catch
+            foreach (var dir in pastas)
             {
-                // Ignora pastas sem permissão
-            }
-
-            return lista;
-        }
-
-        private TreeViewItem CriarTreeViewItem(AulaItem item)
-        {
-            var tvi = new TreeViewItem { Header = CriarHeader(item), Tag = item };
-
-            if (item.ÉModulo)
-            {
-                tvi.Items.Add(null); // nó temporário para lazy loading
-                tvi.Expanded += (s, e) =>
+                try
                 {
-                    if (tvi.Items.Count == 1 && tvi.Items[0] == null)
+                    var folder = new FolderItem
                     {
-                        tvi.Items.Clear();
-                        foreach (var sub in item.SubItens)
-                            tvi.Items.Add(CriarTreeViewItem(sub));
-                    }
-                };
+                        Name = Path.GetFileName(dir) ?? "",
+                        FullPath = dir
+                    };
+
+                    folder.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(FolderItem.IsChecked))
+                            MarcarTodosPorCaminho(folder.FullPath, folder.IsChecked == true);
+                    };
+
+                    CarregarPasta(dir, folder.Children);
+
+                    parent.Add(folder);
+
+                    AtualizarCheckboxFolder(folder);
+                }
+                catch { /* Ignorar pastas inacessíveis */ }
             }
 
-            return tvi;
-        }
-
-        private StackPanel CriarHeader(AulaItem item)
-        {
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
-
-            var cb = new CheckBox
-            {
-                IsChecked = item.Assistido,
-                Margin = new Thickness(0, 0, 5, 0)
-            };
-            cb.Checked += (s, e) => item.Assistido = true;
-            cb.Unchecked += (s, e) => item.Assistido = false;
-            sp.Children.Add(cb);
-
-            var tb = new TextBlock { Text = item.Nome };
-            sp.Children.Add(tb);
-
-            if (!item.ÉModulo)
-            {
-                var btn = new Button { Content = "▶", Margin = new Thickness(5, 0, 0, 0) };
-                btn.Click += (s, e) =>
+            // Vídeos
+            var arquivos = Directory.GetFiles(path)
+                .Where(f => new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(f)?.ToLower()))
+                .OrderBy(f =>
                 {
-                    AbrirVideoMPV(item.Caminho);
-                    item.Assistido = true;
-                    cb.IsChecked = true;
-                };
-                sp.Children.Add(btn);
-            }
+                    string name = Path.GetFileNameWithoutExtension(f) ?? "";
+                    return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+                })
+                .ThenBy(f => Path.GetFileName(f));
 
-            return sp;
+            foreach (var file in arquivos)
+            {
+                try
+                {
+                    var video = new VideoItem
+                    {
+                        Name = Path.GetFileName(file) ?? "",
+                        FullPath = file,
+                        IsChecked = videosAssistidos.Contains(file)
+                    };
+
+                    video.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(VideoItem.IsChecked))
+                        {
+                            if (video.IsChecked) videosAssistidos.Add(video.FullPath);
+                            else videosAssistidos.Remove(video.FullPath);
+
+                            SalvarEstado();
+                            AtualizarProgresso();
+                        }
+                    };
+
+                    parent.Add(video);
+                }
+                catch { /* Ignorar arquivos inacessíveis */ }
+            }
         }
 
-        private void AbrirVideoMPV(string caminhoVideo)
+        private void AtualizarCheckboxFolder(FolderItem folder)
         {
-            string mpvPath = @"C:\Program Files (x86)\mpv\mpv.exe"; // ajuste conforme seu sistema
+            if (folder == null) return;
+
+            int total = 0, marcados = 0;
+            ContarVideos(folder, ref total, ref marcados);
+
+            if (total == 0 || marcados == 0)
+                folder.IsChecked = false;
+            else if (marcados == total)
+                folder.IsChecked = true;
+            else
+                folder.IsChecked = null;
+        }
+
+        private void ContarVideos(FolderItem folder, ref int total, ref int marcados)
+        {
+            foreach (var item in folder.Children)
+            {
+                if (item is VideoItem v)
+                {
+                    total++;
+                    if (v.IsChecked) marcados++;
+                }
+                else if (item is FolderItem f)
+                    ContarVideos(f, ref total, ref marcados);
+            }
+        }
+
+        private void MarcarTodosPorCaminho(string pasta, bool marcar)
+        {
+            void MarcarRecursivo(ObservableCollection<object> items)
+            {
+                foreach (var item in items)
+                {
+                    if (item is VideoItem v && v.FullPath.StartsWith(pasta))
+                        v.IsChecked = marcar;
+                    else if (item is FolderItem f)
+                    {
+                        if (f.FullPath.StartsWith(pasta))
+                            f.IsChecked = marcar;
+
+                        MarcarRecursivo(f.Children);
+                    }
+                }
+            }
+
+            MarcarRecursivo(TreeRoot);
+            SalvarEstado();
+            AtualizarProgresso();
+        }
+
+        private void AbrirVideoMPV(string? caminhoVideo)
+        {
+            if (string.IsNullOrEmpty(caminhoVideo)) return;
+
+            string mpvPath = @"C:\Program Files (x86)\mpv\mpv.exe";
             if (!File.Exists(mpvPath))
             {
                 MessageBox.Show("MPV não encontrado. Verifique o caminho.");
@@ -164,6 +212,46 @@ namespace GerenciadorAulas
             {
                 MessageBox.Show($"Erro ao abrir o MPV: {ex.Message}");
             }
+        }
+
+        private void AtualizarProgresso()
+        {
+            int total = 0, marcados = 0;
+
+            foreach (var item in TreeRoot)
+            {
+                if (item is FolderItem f) ContarVideos(f, ref total, ref marcados);
+                else if (item is VideoItem v)
+                {
+                    total++;
+                    if (v.IsChecked) marcados++;
+                }
+            }
+
+            progressBar.Value = total == 0 ? 0 : (double)marcados / total * 100;
+            lblProgress.Content = $"{(int)progressBar.Value}%";
+        }
+
+        private void SalvarEstado()
+        {
+            try
+            {
+                File.WriteAllText(estadoArquivo, JsonConvert.SerializeObject(videosAssistidos.ToList()));
+            }
+            catch { }
+        }
+
+        private void CarregarEstado()
+        {
+            if (!File.Exists(estadoArquivo)) return;
+
+            try
+            {
+                var lista = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(estadoArquivo));
+                if (lista != null)
+                    videosAssistidos = new HashSet<string>(lista);
+            }
+            catch { }
         }
     }
 }

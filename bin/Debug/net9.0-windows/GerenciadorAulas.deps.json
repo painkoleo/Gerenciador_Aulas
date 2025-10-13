@@ -9,6 +9,7 @@
       "GerenciadorAulas/1.0.0": {
         "dependencies": {
           "Microsoft.Windows.Compatibility": "9.0.9",
+          "Newtonsoft.Json": "13.0.4",
           "Ookii.Dialogs.Wpf": "5.0.1"
         },
         "runtime": {
@@ -71,6 +72,14 @@
           "System.Text.Encoding.CodePages": "9.0.9",
           "System.Threading.AccessControl": "9.0.9",
           "System.Web.Services.Description": "4.10.3"
+        }
+      },
+      "Newtonsoft.Json/13.0.4": {
+        "runtime": {
+          "lib/net6.0/Newtonsoft.Json.dll": {
+            "assemblyVersion": "13.0.0.0",
+            "fileVersion": "13.0.4.30916"
+          }
         }
       },
       "Ookii.Dialogs.Wpf/5.0.1": {
@@ -778,6 +787,13 @@
       "sha512": "sha512-I5RP2ynl3JJ6MrwAedPO4kCv4OuTLeL+a7SaYahJx8b6731u/0DKav4+aXGo/rgApYfBLmSNFTvXABVaci39gQ==",
       "path": "microsoft.windows.compatibility/9.0.9",
       "hashPath": "microsoft.windows.compatibility.9.0.9.nupkg.sha512"
+    },
+    "Newtonsoft.Json/13.0.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A==",
+      "path": "newtonsoft.json/13.0.4",
+      "hashPath": "newtonsoft.json.13.0.4.nupkg.sha512"
     },
     "Ookii.Dialogs.Wpf/5.0.1": {
       "type": "package",

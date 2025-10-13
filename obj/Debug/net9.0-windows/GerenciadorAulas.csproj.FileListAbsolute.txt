@@ -1,3 +1,6 @@
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas.csproj.AssemblyReference.cache
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\App.g.cs
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas_MarkupCompile.cache
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\GerenciadorAulas.exe
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\GerenciadorAulas.deps.json
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\GerenciadorAulas.runtimeconfig.json
@@ -5,6 +8,7 @@ C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\GerenciadorAulas.pdb
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\Microsoft.Bcl.AsyncInterfaces.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\Microsoft.Extensions.ObjectPool.dll
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\Newtonsoft.Json.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\Ookii.Dialogs.Wpf.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\System.ComponentModel.Composition.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\System.ComponentModel.Composition.Registration.dll
@@ -88,11 +92,10 @@ C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\runtimes\win\lib\net9.0\System.Runtime.Caching.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\runtimes\win\lib\net9.0\System.ServiceProcess.ServiceController.dll
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\bin\Debug\net9.0-windows\runtimes\win\lib\net9.0\System.Speech.dll
-C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas.csproj.AssemblyReference.cache
-C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\MainWindow.g.cs
-C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\App.g.cs
-C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas_MarkupCompile.cache
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GeneratedInternalTypeHelper.g.cs
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas_MarkupCompile.lref
+C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\MainWindow.baml
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas.g.resources
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\leo\Desktop\projetinho\GerenciadorAulas\GerenciadorAulas\obj\Debug\net9.0-windows\GerenciadorAulas.AssemblyInfoInputs.cache
