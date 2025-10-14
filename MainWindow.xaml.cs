@@ -23,16 +23,15 @@ namespace GerenciadorAulas
 
         public RelayCommand<string?> PlayCommand { get; }
 
-        private CancellationTokenSource? cts; // Controle de pausa
+        private CancellationTokenSource? cts;
 
         public MainWindow()
         {
-            InitializeComponent();
+            InitializeComponent(); // ⚠️ Essencial para que XAML seja carregado
             DataContext = this;
 
             PlayCommand = new RelayCommand<string?>(AbrirVideoMPVAsync);
 
-            // Define o caminho persistente em AppData
             string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
             if (!Directory.Exists(appData))
                 Directory.CreateDirectory(appData);
