@@ -15,30 +15,32 @@
                                             Brush2="#2d2d2d"/>
 
         <!-- Template para vídeos -->
+        <!-- Template para vídeos -->
         <DataTemplate DataType="{x:Type local:VideoItem}">
-            <StackPanel Orientation="Horizontal"
+        <StackPanel Orientation="Horizontal"
                         Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
                 <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                          Margin="0,0,5,0"/>
+                        Margin="0,0,5,0"/>
                 <Image Source="pack://application:,,,/Resources/video.png"
-                       Width="20"
-                       Height="20"
-                       Margin="0,0,5,0"/>
+                Width="20"
+                Height="20"
+                Margin="0,0,5,0"/>
                 <TextBlock Text="{Binding Name}"
-                           VerticalAlignment="Center"
-                           Foreground="White"
-                           TextTrimming="CharacterEllipsis"/>
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        TextTrimming="CharacterEllipsis"/>
                 <Button Width="25"
                         Height="25"
                         Margin="5,0,0,0"
                         Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding FullPath}">
-                    <Image Source="pack://application:,,,/Resources/play_custom.png"
-                           Width="15"
-                           Height="15"/>
+                <Image Source="pack://application:,,,/Resources/play_custom.png"
+                        Width="15"
+                        Height="15"/>
                 </Button>
-            </StackPanel>
+        </StackPanel>
         </DataTemplate>
+
 
         <!-- Template para pastas -->
         <HierarchicalDataTemplate DataType="{x:Type local:FolderItem}"
@@ -52,9 +54,14 @@
                        Height="20"
                        Margin="0,0,5,0"/>
                 <TextBlock Text="{Binding Name}"
-                           VerticalAlignment="Center"
-                           Foreground="White"
-                           TextTrimming="CharacterEllipsis"/>
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        TextTrimming="CharacterEllipsis"/>
+                <!-- Progresso da pasta (opcional) -->
+                <Label Content="{Binding Progress, StringFormat=' {0}%'}"
+                       Foreground="LightGreen"
+                       VerticalAlignment="Center"
+                       Margin="5,0,0,0"/>
             </StackPanel>
         </HierarchicalDataTemplate>
     </Window.Resources>
