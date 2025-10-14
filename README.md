@@ -1,5 +1,7 @@
 # 🎬 Gerenciador de Aulas
 
+![.NET](https://img.shields.io/badge/.NET-9.0-blue) ![WPF](https://img.shields.io/badge/WPF-UI-brightgreen) ![License](https://img.shields.io/badge/License-MIT-yellow)
+
 Um aplicativo em **WPF** para gerenciar, assistir e acompanhar o progresso de vídeos de aulas organizados em pastas. Permite marcar vídeos assistidos, acompanhar o progresso por módulo e reproduzir vídeos via **MPV**.
 
 ---
@@ -42,14 +44,13 @@ Um aplicativo em **WPF** para gerenciar, assistir e acompanhar o progresso de v�
 ---
 
 ## 📂 Estrutura do projeto
-
-GerenciadorAulas/
-│
-├─ MainWindow.xaml / MainWindow.xaml.cs → Interface principal e lógica do TreeView
-├─ FolderItem.cs → Modelo de pasta/módulo
-├─ VideoItem.cs → Modelo de vídeo
-├─ Resources/ → Ícones de pasta, vídeo e play
-└─ videos_assistidos.json → Armazena o progresso dos vídeos
+GerenciadorAulas/<br>
+│<br>
+├─ MainWindow.xaml / MainWindow.xaml.cs → Interface principal e lógica do TreeView<br>
+├─ FolderItem.cs → Modelo de pasta/módulo<br>
+├─ VideoItem.cs → Modelo de vídeo<br>
+├─ Resources/ → Ícones de pasta, vídeo e play<br>
+└─ videos_assistidos.json → Armazena o progresso dos vídeos<br>
 
 
 ---
@@ -73,7 +74,7 @@ GerenciadorAulas/
 
 ---
 
-## 📌Mmelhorias futuras
+## 📌 Melhorias futuras
 
 - Suporte a múltiplos players de vídeo.  
 - Configuração de atalhos de teclado para avançar vídeos.  
@@ -82,3 +83,6 @@ GerenciadorAulas/
 
 ---
 
+## 📝 Licença
+
+Este projeto está licenciado sob a licença **MIT**.
