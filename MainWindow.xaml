@@ -66,7 +66,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Linha superior: botão + caminho -->
+        <!-- Linha superior: botão + caminho + pause -->
         <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
             <Button x:Name="BtnSelectFolder"
                     Content="Selecionar Pasta"
@@ -77,8 +77,17 @@
                     Foreground="White"
                     FontWeight="Bold"
                     Click="BtnSelectFolder_Click"/>
+            <Button x:Name="BtnPause"
+                    Content="Pause"
+                    Width="100"
+                    Height="35"
+                    Margin="0 0 10 0"
+                    Background="#e24a4a"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Click="BtnPause_Click"/>
             <TextBox x:Name="txtFolderPath"
-                     Width="650"
+                     Width="540"
                      Height="35"
                      IsReadOnly="True"
                      VerticalContentAlignment="Center"

@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Newtonsoft.Json;
 using Ookii.Dialogs.Wpf;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace GerenciadorAulas
 {
@@ -21,16 +23,19 @@ namespace GerenciadorAulas
 
         public RelayCommand<string?> PlayCommand { get; }
 
+        private CancellationTokenSource? cts; // Controle de pausa
+
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
-            PlayCommand = new RelayCommand<string?>(AbrirVideoMPV);
+            PlayCommand = new RelayCommand<string?>(AbrirVideoMPVAsync);
 
             CarregarEstado();
         }
 
+        #region Seleção de pasta e carregamento
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new VistaFolderBrowserDialog
@@ -143,7 +148,9 @@ namespace GerenciadorAulas
                 catch { /* Ignorar arquivos inacessíveis */ }
             }
         }
+        #endregion
 
+        #region Atualização de checkboxes e progresso
         private void AtualizarCheckboxFolder(FolderItem folder)
         {
             if (folder == null) return;
@@ -192,69 +199,6 @@ namespace GerenciadorAulas
             AtualizarPais(folder.ParentFolder);
         }
 
-        private void AbrirVideoMPV(string? caminhoVideo)
-{
-    if (string.IsNullOrEmpty(caminhoVideo)) return;
-
-    string pasta = Path.GetDirectoryName(caminhoVideo) ?? "";
-
-    // Obter todos os vídeos da mesma pasta, em ordem numérica
-    var videosNaPasta = TreeRoot.SelectMany(x => ObterVideosRecursivo(x))
-                                .Where(v => Path.GetDirectoryName(v.FullPath) == pasta)
-                                .OrderBy(v =>
-                                {
-                                    string name = Path.GetFileNameWithoutExtension(v.FullPath) ?? "";
-                                    return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
-                                })
-                                .ThenBy(v => Path.GetFileName(v.FullPath))
-                                .ToList();
-
-    int indiceAtual = videosNaPasta.FindIndex(v => v.FullPath == caminhoVideo);
-    if (indiceAtual == -1) return;
-
-    // Reproduzir a partir do vídeo selecionado, marcando as checkboxes
-    for (int i = indiceAtual; i < videosNaPasta.Count; i++)
-    {
-        var video = videosNaPasta[i];
-
-        // Marca a checkbox automaticamente
-        video.IsChecked = true;
-        if (!videosAssistidos.Contains(video.FullPath))
-            videosAssistidos.Add(video.FullPath);
-        SalvarEstado();
-        AtualizarProgresso();
-
-        // Abre MPV e aguarda finalizar
-        try
-        {
-            Process mpv = Process.Start(new ProcessStartInfo
-            {
-                FileName = @"C:\Program Files (x86)\mpv\mpv.exe",
-                Arguments = $"\"{video.FullPath}\"",
-                UseShellExecute = false
-            });
-            mpv?.WaitForExit();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Erro ao abrir o MPV: {ex.Message}");
-        }
-    }
-}
-
-
-        private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
-        {
-            if (item is VideoItem v)
-                yield return v;
-            else if (item is FolderItem f)
-            {
-                foreach (var child in f.Children)
-                    foreach (var vid in ObterVideosRecursivo(child))
-                        yield return vid;
-            }
-        }
-
         private void AtualizarProgresso()
         {
             int total = 0, marcados = 0;
@@ -285,7 +229,9 @@ namespace GerenciadorAulas
                 if (item is FolderItem f)
                     AtualizarNomeComProgresso(f);
         }
+        #endregion
 
+        #region Salvar / carregar estado
         private void SalvarEstado()
         {
             try
@@ -307,5 +253,97 @@ namespace GerenciadorAulas
             }
             catch { }
         }
+        #endregion
+
+        #region Reprodução de vídeos assíncrona
+        private async void AbrirVideoMPVAsync(string? caminhoVideo)
+        {
+            if (string.IsNullOrEmpty(caminhoVideo)) return;
+
+            cts = new CancellationTokenSource();
+
+            try
+            {
+                await Task.Run(() => PlayVideosAsync(caminhoVideo, cts.Token));
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Reprodução pausada!");
+            }
+        }
+
+        private void BtnPause_Click(object sender, RoutedEventArgs e)
+        {
+            cts?.Cancel();
+        }
+
+        private void PlayVideosAsync(string caminhoVideo, CancellationToken token)
+        {
+            string pasta = Path.GetDirectoryName(caminhoVideo) ?? "";
+
+            var videosNaPasta = TreeRoot.SelectMany(x => ObterVideosRecursivo(x))
+                                        .Where(v => Path.GetDirectoryName(v.FullPath) == pasta)
+                                        .OrderBy(v =>
+                                        {
+                                            string name = Path.GetFileNameWithoutExtension(v.FullPath) ?? "";
+                                            return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+                                        })
+                                        .ThenBy(v => Path.GetFileName(v.FullPath))
+                                        .ToList();
+
+            int indiceAtual = videosNaPasta.FindIndex(v => v.FullPath == caminhoVideo);
+            if (indiceAtual == -1) return;
+
+            for (int i = indiceAtual; i < videosNaPasta.Count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+
+                var video = videosNaPasta[i];
+
+                // Atualiza checkbox e progresso na UI
+                Dispatcher.Invoke(() =>
+                {
+                    video.IsChecked = true;
+                    if (!videosAssistidos.Contains(video.FullPath))
+                        videosAssistidos.Add(video.FullPath);
+                    SalvarEstado();
+                    AtualizarProgresso();
+                });
+
+                // Executa MPV
+                try
+                {
+                    using var mpv = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = @"C:\Program Files (x86)\mpv\mpv.exe",
+                        Arguments = $"\"{video.FullPath}\"",
+                        UseShellExecute = false
+                    });
+
+                    if (mpv != null)
+                        mpv.WaitForExit();
+                }
+                catch (Exception ex)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        MessageBox.Show($"Erro ao abrir o MPV: {ex.Message}");
+                    });
+                }
+            }
+        }
+
+        private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
+        {
+            if (item is VideoItem v)
+                yield return v;
+            else if (item is FolderItem f)
+            {
+                foreach (var child in f.Children)
+                    foreach (var vid in ObterVideosRecursivo(child))
+                        yield return vid;
+            }
+        }
+        #endregion
     }
 }
