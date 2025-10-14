@@ -4,31 +4,36 @@ namespace GerenciadorAulas
 {
     public class VideoItem : INotifyPropertyChanged
     {
-        private string _name = "";
-        private bool _isChecked = false;
+        private string name = "";
+        private bool isChecked = false;
 
-        public string FullPath { get; set; } = "";
         public string Name
         {
-            get => _name;
-            set { _name = value; OnPropertyChanged(nameof(Name)); }
+            get => name;
+            set { name = value; OnPropertyChanged(nameof(Name)); }
         }
+
+        public string FullPath { get; set; } = "";
+        public FolderItem? ParentFolder { get; set; }
 
         public bool IsChecked
         {
-            get => _isChecked;
+            get => isChecked;
             set
             {
-                if (_isChecked != value)
+                if (isChecked != value)
                 {
-                    _isChecked = value;
+                    isChecked = value;
                     OnPropertyChanged(nameof(IsChecked));
                 }
             }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged(string propertyName) =>
+
+        protected void OnPropertyChanged(string propertyName)
+        {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,7 +18,6 @@ namespace GerenciadorAulas
         private string estadoArquivo = "videos_assistidos.json";
 
         public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
-
         public RelayCommand<string?> PlayCommand { get; }
 
         public MainWindow()
@@ -25,7 +25,6 @@ namespace GerenciadorAulas
             InitializeComponent();
             DataContext = this;
 
-            // Comando seguro para abrir vídeo
             PlayCommand = new RelayCommand<string?>(AbrirVideoMPV);
 
             CarregarEstado();
@@ -75,9 +74,13 @@ namespace GerenciadorAulas
             {
                 try
                 {
+                    var folderName = Path.GetFileName(dir);
+                    if (string.IsNullOrEmpty(folderName))
+                        folderName = dir.TrimEnd(Path.DirectorySeparatorChar).Split(Path.DirectorySeparatorChar).Last();
+
                     var folder = new FolderItem
                     {
-                        Name = Path.GetFileName(dir) ?? "",
+                        Name = folderName,
                         FullPath = dir
                     };
 
@@ -88,11 +91,10 @@ namespace GerenciadorAulas
                     };
 
                     CarregarPasta(dir, folder.Children);
-
                     parent.Add(folder);
 
                     AtualizarCheckboxFolder(folder);
-                    AtualizarTodosNomes();
+                    AtualizarNomeComProgresso(folder);
                 }
                 catch { /* Ignorar pastas inacessíveis */ }
             }
@@ -127,16 +129,86 @@ namespace GerenciadorAulas
 
                             SalvarEstado();
                             AtualizarProgresso();
-
-                            // Atualiza o nome das pastas com progresso
-                            AtualizarTodosNomes();
+                            AtualizarNomePastaDoVideo(video);
                         }
                     };
 
                     parent.Add(video);
                 }
-                catch { /* Ignorar arquivos inacessíveis */ }
+                catch { }
             }
+        }
+
+        private void AbrirVideoMPV(string? caminhoVideo)
+        {
+            if (string.IsNullOrEmpty(caminhoVideo)) return;
+
+            // Marcar automaticamente
+            var videoItem = EncontrarVideoItem(caminhoVideo, TreeRoot);
+            if (videoItem != null && !videoItem.IsChecked)
+            {
+                videoItem.IsChecked = true;
+                videosAssistidos.Add(videoItem.FullPath);
+                SalvarEstado();
+                AtualizarProgresso();
+            }
+
+            string mpvPath = @"C:\Program Files (x86)\mpv\mpv.exe";
+            if (!File.Exists(mpvPath))
+            {
+                MessageBox.Show("MPV não encontrado. Verifique o caminho.");
+                return;
+            }
+
+            try
+            {
+                var pasta = Path.GetDirectoryName(caminhoVideo);
+                if (pasta == null) return;
+
+                // Lista de vídeos ordenada
+                var arquivos = Directory.GetFiles(pasta)
+                    .Where(f => new[] { ".mp4", ".mkv", ".avi", ".mov" }
+                    .Contains(Path.GetExtension(f)?.ToLower()))
+                    .OrderBy(f =>
+                    {
+                        string name = Path.GetFileNameWithoutExtension(f) ?? "";
+                        return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+                    })
+                    .ThenBy(f => Path.GetFileName(f))
+                    .ToList();
+
+                int index = arquivos.IndexOf(caminhoVideo);
+
+                // Passar apenas os arquivos como playlist, não o arquivo isolado
+                string argumentos = string.Join(" ", arquivos.Select(a => $"\"{a}\""));
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = mpvPath,
+                    Arguments = argumentos,
+                    UseShellExecute = false
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Erro ao abrir o MPV: {ex.Message}");
+            }
+        }
+
+
+
+        private VideoItem? EncontrarVideoItem(string caminho, ObservableCollection<object> items)
+        {
+            foreach (var item in items)
+            {
+                if (item is VideoItem v && v.FullPath == caminho) return v;
+                if (item is FolderItem f)
+                {
+                    var res = EncontrarVideoItem(caminho, f.Children);
+                    if (res != null) return res;
+                }
+            }
+            return null;
         }
 
         private void AtualizarCheckboxFolder(FolderItem folder)
@@ -168,15 +240,6 @@ namespace GerenciadorAulas
             }
         }
 
-        private void AtualizarTodosNomes()
-{
-    foreach (var item in TreeRoot)
-    {
-        if (item is FolderItem f)
-            f.AtualizarProgresso();
-    }
-}
-
         private void MarcarTodosPorCaminho(string pasta, bool marcar)
         {
             void MarcarRecursivo(ObservableCollection<object> items)
@@ -198,32 +261,21 @@ namespace GerenciadorAulas
             MarcarRecursivo(TreeRoot);
             SalvarEstado();
             AtualizarProgresso();
-            AtualizarTodosNomes();
         }
 
-        private void AbrirVideoMPV(string? caminhoVideo)
+        private void AtualizarNomeComProgresso(FolderItem folder)
         {
-            if (string.IsNullOrEmpty(caminhoVideo)) return;
+            int total = 0, marcados = 0;
+            ContarVideos(folder, ref total, ref marcados);
+            folder.Name = $"{folder.Name.Split('(')[0].Trim()} ({marcados}/{total})";
+        }
 
-            string mpvPath = @"C:\Program Files (x86)\mpv\mpv.exe";
-            if (!File.Exists(mpvPath))
+        private void AtualizarNomePastaDoVideo(VideoItem video)
+        {
+            foreach (var item in TreeRoot)
             {
-                MessageBox.Show("MPV não encontrado. Verifique o caminho.");
-                return;
-            }
-
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = mpvPath,
-                    Arguments = $"\"{caminhoVideo}\"",
-                    UseShellExecute = false
-                });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erro ao abrir o MPV: {ex.Message}");
+                if (item is FolderItem f && video.FullPath.StartsWith(f.FullPath))
+                    AtualizarNomeComProgresso(f);
             }
         }
 
