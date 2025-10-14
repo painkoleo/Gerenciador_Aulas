@@ -16,7 +16,8 @@ namespace GerenciadorAulas
     public partial class MainWindow : Window
     {
         private HashSet<string> videosAssistidos = new HashSet<string>();
-        private string estadoArquivo = "videos_assistidos.json";
+        private string estadoArquivo;
+        private string pastaArquivo;
 
         public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
 
@@ -31,7 +32,16 @@ namespace GerenciadorAulas
 
             PlayCommand = new RelayCommand<string?>(AbrirVideoMPVAsync);
 
+            // Define o caminho persistente em AppData
+            string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
+            if (!Directory.Exists(appData))
+                Directory.CreateDirectory(appData);
+
+            estadoArquivo = Path.Combine(appData, "videos_assistidos.json");
+            pastaArquivo = Path.Combine(appData, "ultima_pasta.json");
+
             CarregarEstado();
+            CarregarUltimaPasta();
         }
 
         #region Seleção de pasta e carregamento
@@ -48,6 +58,8 @@ namespace GerenciadorAulas
             string path = dialog.SelectedPath;
             txtFolderPath.Text = path;
 
+            SalvarUltimaPasta(path);
+
             TreeRoot.Clear();
             AtualizarProgresso();
 
@@ -60,6 +72,33 @@ namespace GerenciadorAulas
             {
                 MessageBox.Show($"Erro ao carregar a pasta: {ex.Message}");
             }
+        }
+
+        private void CarregarUltimaPasta()
+        {
+            if (!File.Exists(pastaArquivo)) return;
+
+            try
+            {
+                string path = File.ReadAllText(pastaArquivo);
+                if (Directory.Exists(path))
+                {
+                    txtFolderPath.Text = path;
+                    TreeRoot.Clear();
+                    CarregarPasta(path, TreeRoot, null);
+                    AtualizarProgresso();
+                }
+            }
+            catch { }
+        }
+
+        private void SalvarUltimaPasta(string path)
+        {
+            try
+            {
+                File.WriteAllText(pastaArquivo, path);
+            }
+            catch { }
         }
 
         private void CarregarPasta(string path, ObservableCollection<object> parent, FolderItem? parentFolder)
@@ -370,28 +409,26 @@ namespace GerenciadorAulas
         }
 
         private void BtnStop_Click(object sender, RoutedEventArgs e)
-{
-    // Cancela a task de reprodução
-    if (cts != null)
-    {
-        cts.Cancel();
-    }
-
-    // Encerra todos os processos MPV abertos
-    foreach (var proc in Process.GetProcessesByName("mpv"))
-    {
-        try
         {
-            proc.Kill();
+            // Cancela a task de reprodução
+            if (cts != null)
+            {
+                cts.Cancel();
+            }
+
+            // Encerra todos os processos MPV abertos
+            foreach (var proc in Process.GetProcessesByName("mpv"))
+            {
+                try
+                {
+                    proc.Kill();
+                }
+                catch { /* Ignora se não conseguir encerrar */ }
+            }
+
+            // Limpa label do vídeo atual
+            lblVideoAtual.Text = "";
         }
-        catch { /* Ignora se não conseguir encerrar */ }
-    }
-
-    // Limpa label do vídeo atual
-    lblVideoAtual.Text = "";
-}
-
-
         #endregion
     }
 }

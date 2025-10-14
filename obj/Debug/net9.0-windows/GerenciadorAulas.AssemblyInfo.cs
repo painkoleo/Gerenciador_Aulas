@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GerenciadorAulas")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7eed6eb6dd9bc741ad86c0b3d83f16d7fa5802cf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+81a6097da8850d1d6208c287f08282f59064d2ef")]
 [assembly: System.Reflection.AssemblyProductAttribute("GerenciadorAulas")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GerenciadorAulas")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
