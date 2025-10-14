@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\leo\\Desktop\\projetinho\\GerenciadorAulas\\GerenciadorAulas\\GerenciadorAulas.csproj": {}
+    "C:\\Users\\leo\\Gerenciador_Aulas\\GerenciadorAulas.csproj": {}
   },
   "projects": {
-    "C:\\Users\\leo\\Desktop\\projetinho\\GerenciadorAulas\\GerenciadorAulas\\GerenciadorAulas.csproj": {
+    "C:\\Users\\leo\\Gerenciador_Aulas\\GerenciadorAulas.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\leo\\Desktop\\projetinho\\GerenciadorAulas\\GerenciadorAulas\\GerenciadorAulas.csproj",
+        "projectUniqueName": "C:\\Users\\leo\\Gerenciador_Aulas\\GerenciadorAulas.csproj",
         "projectName": "GerenciadorAulas",
-        "projectPath": "C:\\Users\\leo\\Desktop\\projetinho\\GerenciadorAulas\\GerenciadorAulas\\GerenciadorAulas.csproj",
+        "projectPath": "C:\\Users\\leo\\Gerenciador_Aulas\\GerenciadorAulas.csproj",
         "packagesPath": "C:\\Users\\leo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\leo\\Desktop\\projetinho\\GerenciadorAulas\\GerenciadorAulas\\obj\\",
+        "outputPath": "C:\\Users\\leo\\Gerenciador_Aulas\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\leo\\AppData\\Roaming\\NuGet\\NuGet.Config"

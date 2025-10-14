@@ -8,111 +8,111 @@
         Background="#1e1e1e"
         Foreground="White">
 
-        <Window.Resources>
-                <!-- Zebra Converter -->
-                <local:AlternatingRowBrushConverter x:Key="ZebraConverter"
-                                Brush1="#1e1e1e"
-                                Brush2="#2d2d2d"/>
+    <Window.Resources>
+        <!-- Zebra Converter -->
+        <local:AlternatingRowBrushConverter x:Key="ZebraConverter"
+                                            Brush1="#1e1e1e"
+                                            Brush2="#2d2d2d"/>
 
-                <!-- Template para vídeos -->
-                <DataTemplate DataType="{x:Type local:VideoItem}">
-                        <StackPanel Orientation="Horizontal"
-                                        Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                                Margin="0,0,5,0"/>
-                                <Image Source="pack://application:,,,/Resources/video.png"
-                                                Width="20"
-                                                Height="20"
-                                                Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding Name}"
-                                                VerticalAlignment="Center"
-                                                Foreground="White"
-                                                TextTrimming="CharacterEllipsis"/>
-                                <Button Width="25"
-                                                Height="25"
-                                                Margin="5,0,0,0"
-                                                Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding FullPath}">
-                                        <Image Source="pack://application:,,,/Resources/play_custom.png"
-                                                        Width="15"
-                                                        Height="15"/>
-                                </Button>
-                        </StackPanel>
-                </DataTemplate>
+        <!-- Template para vídeos -->
+        <DataTemplate DataType="{x:Type local:VideoItem}">
+            <StackPanel Orientation="Horizontal"
+                        Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
+                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                          Margin="0,0,5,0"/>
+                <Image Source="pack://application:,,,/Resources/video.png"
+                       Width="20"
+                       Height="20"
+                       Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding Name}"
+                           VerticalAlignment="Center"
+                           Foreground="White"
+                           TextTrimming="CharacterEllipsis"/>
+                <Button Width="25"
+                        Height="25"
+                        Margin="5,0,0,0"
+                        Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding FullPath}">
+                    <Image Source="pack://application:,,,/Resources/play_custom.png"
+                           Width="15"
+                           Height="15"/>
+                </Button>
+            </StackPanel>
+        </DataTemplate>
 
-                <!-- Template para pastas -->
-                <HierarchicalDataTemplate DataType="{x:Type local:FolderItem}"
-                                ItemsSource="{Binding Children}">
-                        <StackPanel Orientation="Horizontal"
-                                        Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                                Margin="0,0,5,0"/>
-                                <Image Source="pack://application:,,,/Resources/folder.png"
-                                                Width="20"
-                                                Height="20"
-                                                Margin="0,0,5,0"/>
-                                <TextBlock Text="{Binding Name}"
-                                                VerticalAlignment="Center"
-                                                Foreground="White"
-                                                TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                </HierarchicalDataTemplate>
-        </Window.Resources>
+        <!-- Template para pastas -->
+        <HierarchicalDataTemplate DataType="{x:Type local:FolderItem}"
+                                  ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal"
+                        Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
+                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                          Margin="0,0,5,0"/>
+                <Image Source="pack://application:,,,/Resources/folder.png"
+                       Width="20"
+                       Height="20"
+                       Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding Name}"
+                           VerticalAlignment="Center"
+                           Foreground="White"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </HierarchicalDataTemplate>
+    </Window.Resources>
 
-        <Grid Margin="10">
-                <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-                <!-- Linha superior: botão + caminho -->
-                <StackPanel Orientation="Horizontal"
-                                Margin="0 0 0 10">
-                        <Button x:Name="BtnSelectFolder"
-                                Content="Selecionar Pasta"
-                                Width="140"
-                                Height="35"
-                                Margin="0 0 10 0"
-                                Background="#4a90e2"
-                                Foreground="White"
-                                FontWeight="Bold"
-                                Click="BtnSelectFolder_Click"/>
-                        <TextBox x:Name="txtFolderPath"
-                                 Width="650"
-                                 Height="35"
-                                 IsReadOnly="True"
-                                 VerticalContentAlignment="Center"
-                                 Background="#333333"
-                                 Foreground="White"/>
-                </StackPanel>
+        <!-- Linha superior: botão + caminho -->
+        <StackPanel Orientation="Horizontal"
+                    Margin="0 0 0 10">
+            <Button x:Name="BtnSelectFolder"
+                    Content="Selecionar Pasta"
+                    Width="140"
+                    Height="35"
+                    Margin="0 0 10 0"
+                    Background="#4a90e2"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Click="BtnSelectFolder_Click"/>
+            <TextBox x:Name="txtFolderPath"
+                     Width="650"
+                     Height="35"
+                     IsReadOnly="True"
+                     VerticalContentAlignment="Center"
+                     Background="#333333"
+                     Foreground="White"/>
+        </StackPanel>
 
-                <!-- Barra de progresso -->
-                <StackPanel Grid.Row="1"
-                                Orientation="Horizontal"
-                                Margin="0 0 0 10">
-                        <ProgressBar x:Name="progressBar"
-                                     Height="25"
-                                     Width="700"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     Foreground="#4a90e2"
-                                     Background="#555555"/>
-                        <Label x:Name="lblProgress"
-                               Content="0%"
-                               Margin="10,0,0,0"
-                               VerticalAlignment="Center"
-                               FontWeight="Bold"/>
-                </StackPanel>
+        <!-- Barra de progresso -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    Margin="0 0 0 10">
+            <ProgressBar x:Name="progressBar"
+                         Height="25"
+                         Width="700"
+                         Minimum="0"
+                         Maximum="100"
+                         Foreground="#4a90e2"
+                         Background="#555555"/>
+            <Label x:Name="lblProgress"
+                   Content="0%"
+                   Margin="10,0,0,0"
+                   VerticalAlignment="Center"
+                   FontWeight="Bold"/>
+        </StackPanel>
 
-                <!-- TreeView -->
-                <TreeView x:Name="treeModules"
-                          Grid.Row="2"
-                          ItemsSource="{Binding TreeRoot}"
-                          BorderBrush="#555555"
-                          BorderThickness="1"
-                          FontSize="14"
-                          Background="#1e1e1e"
-                          AlternationCount="2"/>
-        </Grid>
+        <!-- TreeView -->
+        <TreeView x:Name="treeModules"
+                  Grid.Row="2"
+                  ItemsSource="{Binding TreeRoot}"
+                  BorderBrush="#555555"
+                  BorderThickness="1"
+                  FontSize="14"
+                  Background="#1e1e1e"
+                  AlternationCount="2"/>
+    </Grid>
 </Window>

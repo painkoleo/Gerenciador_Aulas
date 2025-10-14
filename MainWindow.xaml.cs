@@ -26,7 +26,6 @@ namespace GerenciadorAulas
             InitializeComponent();
             DataContext = this;
 
-            // Corrigido para string? (null-safe)
             PlayCommand = new RelayCommand<string?>(AbrirVideoMPV);
 
             CarregarEstado();
@@ -79,7 +78,8 @@ namespace GerenciadorAulas
                     var folder = new FolderItem
                     {
                         Name = Path.GetFileName(dir) ?? "",
-                        FullPath = dir
+                        FullPath = dir,
+                        Children = new ObservableCollection<object>() // garantia de inicialização
                     };
 
                     folder.PropertyChanged += (s, e) =>
@@ -94,7 +94,10 @@ namespace GerenciadorAulas
 
                     AtualizarCheckboxFolder(folder);
                 }
-                catch { /* Ignorar pastas inacessíveis */ }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erro ao processar pasta {dir}: {ex.Message}");
+                }
             }
 
             // Vídeos
@@ -153,12 +156,14 @@ namespace GerenciadorAulas
 
         private void ContarVideos(FolderItem folder, ref int total, ref int marcados)
         {
+            if (folder?.Children == null) return;
+
             foreach (var item in folder.Children)
             {
                 if (item is VideoItem v)
                 {
                     total++;
-                    if (v.IsChecked) marcados++;
+                    if (v.IsChecked == true) marcados++;
                 }
                 else if (item is FolderItem f)
                     ContarVideos(f, ref total, ref marcados);
@@ -169,6 +174,8 @@ namespace GerenciadorAulas
         {
             void MarcarRecursivo(ObservableCollection<object> items)
             {
+                if (items == null) return;
+
                 foreach (var item in items)
                 {
                     if (item is VideoItem v && v.FullPath.StartsWith(pasta))
@@ -224,7 +231,7 @@ namespace GerenciadorAulas
                 else if (item is VideoItem v)
                 {
                     total++;
-                    if (v.IsChecked) marcados++;
+                    if (v.IsChecked == true) marcados++;
                 }
             }
 

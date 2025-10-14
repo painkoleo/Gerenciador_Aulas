@@ -5,10 +5,12 @@ namespace GerenciadorAulas
 {
     public class FolderItem : INotifyPropertyChanged
     {
-        public string Name { get; set; } = "";
-        public string FullPath { get; set; } = "";
-
         private bool? _isChecked;
+
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = string.Empty;
+        public ObservableCollection<object> Children { get; set; } = new ObservableCollection<object>();
+
         public bool? IsChecked
         {
             get => _isChecked;
@@ -17,13 +19,16 @@ namespace GerenciadorAulas
                 if (_isChecked != value)
                 {
                     _isChecked = value;
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+                    OnPropertyChanged(nameof(IsChecked));
                 }
             }
         }
 
-        public ObservableCollection<object> Children { get; } = new ObservableCollection<object>();
-
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }
