@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -106,7 +105,7 @@ namespace GerenciadorAulas
                     AtualizarCheckboxFolder(folder);
                     AtualizarNomeComProgresso(folder);
                 }
-                catch { /* Ignorar pastas inacessíveis */ }
+                catch { }
             }
 
             var arquivos = Directory.GetFiles(path)
@@ -145,7 +144,7 @@ namespace GerenciadorAulas
 
                     parent.Add(video);
                 }
-                catch { /* Ignorar arquivos inacessíveis */ }
+                catch { }
             }
         }
         #endregion
@@ -231,7 +230,7 @@ namespace GerenciadorAulas
         }
         #endregion
 
-        #region Salvar / carregar estado
+        #region Salvar/Carregar estado
         private void SalvarEstado()
         {
             try
@@ -255,16 +254,18 @@ namespace GerenciadorAulas
         }
         #endregion
 
-        #region Reprodução de vídeos assíncrona
+        #region Reprodução de vídeos
         private async void AbrirVideoMPVAsync(string? caminhoVideo)
         {
             if (string.IsNullOrEmpty(caminhoVideo)) return;
 
-            cts = new CancellationTokenSource();
+            var videoItem = ObterVideosRecursivo(TreeRoot).FirstOrDefault(v => v.FullPath == caminhoVideo);
+            if (videoItem == null) return;
 
+            cts = new CancellationTokenSource();
             try
             {
-                await Task.Run(() => PlayVideosAsync(caminhoVideo, cts.Token));
+                await Task.Run(() => PlayVideosListaAsync(new List<VideoItem> { videoItem }, cts.Token));
             }
             catch (OperationCanceledException)
             {
@@ -272,35 +273,12 @@ namespace GerenciadorAulas
             }
         }
 
-        private void BtnPause_Click(object sender, RoutedEventArgs e)
+        private void PlayVideosListaAsync(List<VideoItem> videos, CancellationToken token)
         {
-            cts?.Cancel();
-        }
-
-        private void PlayVideosAsync(string caminhoVideo, CancellationToken token)
-        {
-            string pasta = Path.GetDirectoryName(caminhoVideo) ?? "";
-
-            var videosNaPasta = TreeRoot.SelectMany(x => ObterVideosRecursivo(x))
-                                        .Where(v => Path.GetDirectoryName(v.FullPath) == pasta)
-                                        .OrderBy(v =>
-                                        {
-                                            string name = Path.GetFileNameWithoutExtension(v.FullPath) ?? "";
-                                            return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
-                                        })
-                                        .ThenBy(v => Path.GetFileName(v.FullPath))
-                                        .ToList();
-
-            int indiceAtual = videosNaPasta.FindIndex(v => v.FullPath == caminhoVideo);
-            if (indiceAtual == -1) return;
-
-            for (int i = indiceAtual; i < videosNaPasta.Count; i++)
+            foreach (var video in videos)
             {
                 token.ThrowIfCancellationRequested();
 
-                var video = videosNaPasta[i];
-
-                // Atualiza checkbox e progresso na UI
                 Dispatcher.Invoke(() =>
                 {
                     video.IsChecked = true;
@@ -308,9 +286,11 @@ namespace GerenciadorAulas
                         videosAssistidos.Add(video.FullPath);
                     SalvarEstado();
                     AtualizarProgresso();
+
+                    // Atualiza nome do vídeo atual
+                    lblVideoAtual.Text = $"Reproduzindo: {video.Name}";
                 });
 
-                // Executa MPV
                 try
                 {
                     using var mpv = Process.Start(new ProcessStartInfo
@@ -331,6 +311,9 @@ namespace GerenciadorAulas
                     });
                 }
             }
+
+            // Limpar label ao terminar
+            Dispatcher.Invoke(() => lblVideoAtual.Text = "");
         }
 
         private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
@@ -344,6 +327,71 @@ namespace GerenciadorAulas
                         yield return vid;
             }
         }
+        #endregion
+
+        #region Botões Play Módulo e Pause
+        private async void BtnPlayModule_Click(object sender, RoutedEventArgs e)
+        {
+            if (treeModules.SelectedItem == null)
+            {
+                MessageBox.Show("Selecione um módulo ou pasta na TreeView.");
+                return;
+            }
+
+            List<VideoItem> videos = new List<VideoItem>();
+            if (treeModules.SelectedItem is FolderItem folder)
+                videos = ObterVideosRecursivo(folder).ToList();
+            else if (treeModules.SelectedItem is VideoItem video)
+                videos.Add(video);
+
+            if (videos.Count == 0)
+            {
+                MessageBox.Show("Não há vídeos neste módulo.");
+                return;
+            }
+
+            cts = new CancellationTokenSource();
+            try
+            {
+                await Task.Run(() => PlayVideosListaAsync(videos, cts.Token));
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Reprodução pausada!");
+            }
+        }
+
+        private void BtnPause_Click(object sender, RoutedEventArgs e)
+        {
+            if (cts != null)
+            {
+                cts.Cancel();
+            }
+        }
+
+        private void BtnStop_Click(object sender, RoutedEventArgs e)
+{
+    // Cancela a task de reprodução
+    if (cts != null)
+    {
+        cts.Cancel();
+    }
+
+    // Encerra todos os processos MPV abertos
+    foreach (var proc in Process.GetProcessesByName("mpv"))
+    {
+        try
+        {
+            proc.Kill();
+        }
+        catch { /* Ignora se não conseguir encerrar */ }
+    }
+
+    // Limpa label do vídeo atual
+    lblVideoAtual.Text = "";
+}
+
+
         #endregion
     }
 }

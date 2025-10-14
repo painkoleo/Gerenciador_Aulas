@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:GerenciadorAulas"
         Title="Gerenciador de Aulas 1.1"
-        Height="650"
+        Height="720"
         Width="850"
         Background="#1e1e1e"
         Foreground="White">
@@ -18,55 +18,38 @@
         <DataTemplate DataType="{x:Type local:VideoItem}">
             <StackPanel Orientation="Horizontal"
                         Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
-                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                          Margin="0,0,5,0"/>
-                <Image Source="pack://application:,,,/Resources/video.png"
-                       Width="20"
-                       Height="20"
-                       Margin="0,0,5,0"/>
-                <TextBlock Text="{Binding Name}"
-                           VerticalAlignment="Center"
-                           Foreground="White"
-                           TextTrimming="CharacterEllipsis"/>
-                <Button Width="25"
-                        Height="25"
-                        Margin="5,0,0,0"
+                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="0,0,5,0"/>
+                <Image Source="pack://application:,,,/Resources/video.png" Width="20" Height="20" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="White" TextTrimming="CharacterEllipsis"/>
+                <Button Width="25" Height="25" Margin="5,0,0,0"
                         Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                         CommandParameter="{Binding FullPath}">
-                    <Image Source="pack://application:,,,/Resources/play_custom.png"
-                           Width="15"
-                           Height="15"/>
+                    <Image Source="pack://application:,,,/Resources/play_custom.png" Width="15" Height="15"/>
                 </Button>
             </StackPanel>
         </DataTemplate>
 
         <!-- Template para pastas -->
-        <HierarchicalDataTemplate DataType="{x:Type local:FolderItem}"
-                                  ItemsSource="{Binding Children}">
+        <HierarchicalDataTemplate DataType="{x:Type local:FolderItem}" ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal"
                         Background="{Binding RelativeSource={RelativeSource AncestorType=TreeViewItem}, Path=(ItemsControl.AlternationIndex), Converter={StaticResource ZebraConverter}}">
-                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                          Margin="0,0,5,0"/>
-                <Image Source="pack://application:,,,/Resources/folder.png"
-                       Width="20"
-                       Height="20"
-                       Margin="0,0,5,0"/>
-                <TextBlock Text="{Binding Name}"
-                           VerticalAlignment="Center"
-                           Foreground="White"
-                           TextTrimming="CharacterEllipsis"/>
+                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="0,0,5,0"/>
+                <Image Source="pack://application:,,,/Resources/folder.png" Width="20" Height="20" Margin="0,0,5,0"/>
+                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" Foreground="White" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
         </HierarchicalDataTemplate>
     </Window.Resources>
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>  <!-- Linha 0: seleção de pasta -->
+            <RowDefinition Height="Auto"/>  <!-- Linha 1: progresso -->
+            <RowDefinition Height="Auto"/>  <!-- Linha 2: botões -->
+            <RowDefinition Height="Auto"/>  <!-- Linha 3: vídeo atual -->
+            <RowDefinition Height="*"/>     <!-- Linha 4: árvore -->
         </Grid.RowDefinitions>
 
-        <!-- Linha superior: botão + caminho + pause -->
+        <!-- Linha superior: botão + caminho -->
         <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
             <Button x:Name="BtnSelectFolder"
                     Content="Selecionar Pasta"
@@ -77,17 +60,8 @@
                     Foreground="White"
                     FontWeight="Bold"
                     Click="BtnSelectFolder_Click"/>
-            <Button x:Name="BtnPause"
-                    Content="Pause"
-                    Width="100"
-                    Height="35"
-                    Margin="0 0 10 0"
-                    Background="#e24a4a"
-                    Foreground="White"
-                    FontWeight="Bold"
-                    Click="BtnPause_Click"/>
             <TextBox x:Name="txtFolderPath"
-                     Width="540"
+                     Width="650"
                      Height="35"
                      IsReadOnly="True"
                      VerticalContentAlignment="Center"
@@ -111,9 +85,52 @@
                    FontWeight="Bold"/>
         </StackPanel>
 
+        <!-- Botões de reprodução -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0 0 0 10" HorizontalAlignment="Left">
+            <Button x:Name="BtnPlayModule"
+                    Content="▶ Reproduzir Módulo"
+                    Width="180"
+                    Height="35"
+                    Background="#4CAF50"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Click="BtnPlayModule_Click"/>
+            <Button x:Name="BtnPause"
+                    Content="⏸ Pausar"
+                    Width="120"
+                    Height="35"
+                    Margin="10,0,0,0"
+                    Background="#E53935"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Click="BtnPause_Click"/>
+                <Button x:Name="BtnStop"
+            Content="⏹ Parar"
+            Width="120"
+            Height="35"
+            Margin="10,0,0,0"
+            Background="#9E9E9E"
+            Foreground="White"
+            FontWeight="Bold"
+            Click="BtnStop_Click"/>
+        </StackPanel>
+
+        <!-- Nome do vídeo atual -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0 0 0 10">
+            <Label Content="Vídeo atual:" FontWeight="Bold" VerticalAlignment="Center" Width="120"/>
+            <TextBlock x:Name="lblVideoAtual"
+                       Text=""
+                       VerticalAlignment="Center"
+                       Foreground="#4a90e2"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       TextTrimming="CharacterEllipsis"
+                       Width="600"/>
+        </StackPanel>
+
         <!-- TreeView -->
         <TreeView x:Name="treeModules"
-                  Grid.Row="2"
+                  Grid.Row="4"
                   ItemsSource="{Binding TreeRoot}"
                   BorderBrush="#555555"
                   BorderThickness="1"
