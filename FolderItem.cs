@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -9,7 +8,7 @@ namespace GerenciadorAulas
         private string name = "";
         private bool? isChecked = false;
         private string displayName = "";
-        
+
         public string Name
         {
             get => name;
@@ -37,6 +36,25 @@ namespace GerenciadorAulas
                 {
                     isChecked = value;
                     OnPropertyChanged(nameof(IsChecked));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Marca todos os filhos recursivamente
+        /// </summary>
+        public void MarcarFilhos(bool marcar)
+        {
+            foreach (var item in Children)
+            {
+                if (item is VideoItem v)
+                {
+                    v.IsChecked = marcar;
+                }
+                else if (item is FolderItem f)
+                {
+                    f.IsChecked = marcar;
+                    f.MarcarFilhos(marcar);
                 }
             }
         }
