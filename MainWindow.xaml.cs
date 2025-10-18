@@ -27,7 +27,7 @@ namespace GerenciadorAulas
 
         public MainWindow()
         {
-            InitializeComponent(); // ⚠️ Essencial para que XAML seja carregado
+            InitializeComponent(); // Essencial
             DataContext = this;
 
             PlayCommand = new RelayCommand<string?>(AbrirVideoMPVAsync);
@@ -326,7 +326,7 @@ namespace GerenciadorAulas
                     AtualizarProgresso();
 
                     // Atualiza nome do vídeo atual
-                    lblVideoAtual.Text = $"Reproduzindo: {video.Name}";
+                    lblVideoAtual.Content = $"Reproduzindo: {video.Name}";
                 });
 
                 try
@@ -351,7 +351,7 @@ namespace GerenciadorAulas
             }
 
             // Limpar label ao terminar
-            Dispatcher.Invoke(() => lblVideoAtual.Text = "");
+            Dispatcher.Invoke(() => lblVideoAtual.Content = "");
         }
 
         private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
@@ -409,24 +409,31 @@ namespace GerenciadorAulas
 
         private void BtnStop_Click(object sender, RoutedEventArgs e)
         {
-            // Cancela a task de reprodução
             if (cts != null)
             {
                 cts.Cancel();
             }
 
-            // Encerra todos os processos MPV abertos
             foreach (var proc in Process.GetProcessesByName("mpv"))
             {
                 try
                 {
                     proc.Kill();
                 }
-                catch { /* Ignora se não conseguir encerrar */ }
+                catch { }
             }
 
-            // Limpa label do vídeo atual
-            lblVideoAtual.Text = "";
+            lblVideoAtual.Content = "";
+        }
+        #endregion
+
+        #region Botão Play individual na TreeView
+        private void BtnPlayVideo_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is VideoItem video)
+            {
+                AbrirVideoMPVAsync(video.FullPath);
+            }
         }
         #endregion
     }
