@@ -15,24 +15,42 @@ namespace GerenciadorAulas
 {
     public partial class MainWindow : Window
     {
+        // =====================================================
+        // 🔹 Campos de estado
+        // =====================================================
         private HashSet<string> videosAssistidos = new HashSet<string>();
-        private string estadoArquivo;
-        private string pastaArquivo;
-        private string ultimoVideoArquivo;
-
-        public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
-
+        private string? estadoArquivo;
+        private string? pastaArquivo;
+        private string? ultimoVideoArquivo;
         private CancellationTokenSource? cts;
 
+        public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
         public RelayCommand<VideoItem?> PlayCommand { get; }
 
+        // =====================================================
+        // 🔹 Construtor
+        // =====================================================
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
-            PlayCommand = new RelayCommand<VideoItem?>(AbrirVideoMPVAsync);
+            PlayCommand = new RelayCommand<VideoItem?>(video =>
+            {
+                if (video != null)
+                    _ = ReproduzirVideosAsync(new[] { video });
+            });
 
+            InicializarArquivosConfiguracao();
+            CarregarEstado();
+            CarregarUltimaPasta();
+        }
+
+        // =====================================================
+        // 🔹 Inicialização de arquivos de configuração
+        // =====================================================
+        private void InicializarArquivosConfiguracao()
+        {
             string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
             if (!Directory.Exists(appData))
                 Directory.CreateDirectory(appData);
@@ -40,32 +58,41 @@ namespace GerenciadorAulas
             estadoArquivo = Path.Combine(appData, "videos_assistidos.json");
             pastaArquivo = Path.Combine(appData, "ultima_pasta.json");
             ultimoVideoArquivo = Path.Combine(appData, "ultimo_video.json");
-
-            CarregarEstado();
-            CarregarUltimaPasta();
         }
 
+        // =====================================================
+        // 🔹 Evento da janela carregada
+        // =====================================================
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             Dispatcher.InvokeAsync(() => CarregarUltimaPasta(), System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        #region Seleção de pasta e carregamento
+        // =====================================================
+        // 🔹 Seleção de pasta
+        // =====================================================
         private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string? path = AbrirDialogPasta("Selecione a pasta principal");
+            if (path == null) return;
+
+            txtFolderPath.Text = path;
+            SalvarUltimaPasta(path);
+            CarregarPastaComProgresso(path);
+        }
+
+        private string? AbrirDialogPasta(string descricao)
         {
             var dialog = new VistaFolderBrowserDialog
             {
-                Description = "Selecione a pasta principal",
+                Description = descricao,
                 UseDescriptionForTitle = true
             };
+            return dialog.ShowDialog(this) == true ? dialog.SelectedPath : null;
+        }
 
-            if (dialog.ShowDialog(this) != true) return;
-
-            string path = dialog.SelectedPath;
-            txtFolderPath.Text = path;
-
-            SalvarUltimaPasta(path);
-
+        private void CarregarPastaComProgresso(string path)
+        {
             TreeRoot.Clear();
             AtualizarProgresso();
 
@@ -90,264 +117,184 @@ namespace GerenciadorAulas
                 if (Directory.Exists(path))
                 {
                     txtFolderPath.Text = path;
-                    TreeRoot.Clear();
-                    CarregarPasta(path, TreeRoot, null);
-                    AtualizarProgresso();
+                    CarregarPastaComProgresso(path);
                 }
             }
             catch { }
         }
 
-private void TreeModules_DragOver(object sender, DragEventArgs e)
-{
-    // Apenas arquivos ou pastas
-    if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        e.Effects = DragDropEffects.Copy;
-    else
-        e.Effects = DragDropEffects.None;
-
-    e.Handled = true;
-}
-
-private void TreeModules_Drop(object sender, DragEventArgs e)
-{
-    if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
-
-    var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-
-    foreach (var path in paths)
-    {
-        if (Directory.Exists(path))
+        private void SalvarUltimaPasta(string path)
         {
-            // Adiciona a pasta e todo seu conteúdo recursivamente
-            AdicionarPastaRecursiva(path, TreeRoot, null);
+            try { File.WriteAllText(pastaArquivo!, path); }
+            catch { }
         }
-        else if (File.Exists(path) && new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(path)?.ToLower()))
+
+        // =====================================================
+        // 🔹 Drag & Drop
+        // =====================================================
+        private void Window_DragOver(object sender, DragEventArgs e) =>
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+
+        private void Window_Drop(object sender, DragEventArgs e)
         {
-            // Adiciona vídeo isolado na raiz
-            var video = new VideoItem
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            foreach (var path in paths)
             {
-                Name = Path.GetFileName(path),
-                FullPath = path,
-                IsChecked = videosAssistidos.Contains(path)
-            };
-            TreeRoot.Add(video);
-        }
-    }
+                if (Directory.Exists(path))
+                    CarregarPastaSeNaoExistir(path);
+                else if (File.Exists(path) && EhVideo(path))
+                    AdicionarVideoSeNaoExistir(path);
+            }
 
-    AtualizarProgresso();
-}
-
-
-private void AdicionarPastaRecursiva(string path, ObservableCollection<object> parent, FolderItem? parentFolder)
-{
-    var folderItem = new FolderItem
-    {
-        Name = Path.GetFileName(path),
-        Children = new ObservableCollection<object>(),
-        ParentFolder = parentFolder
-    };
-
-    folderItem.PropertyChanged += (s, e) =>
-    {
-        if (e.PropertyName == nameof(FolderItem.IsChecked))
-        {
-            if (folderItem.IsChecked.HasValue)
-                folderItem.MarcarFilhos(folderItem.IsChecked.Value);
-
-            AtualizarPais(folderItem.ParentFolder);
-            SalvarEstado();
             AtualizarProgresso();
         }
-    };
 
-    // Pastas
-    foreach (var dir in Directory.GetDirectories(path)
-                                  .OrderBy(d => d))
-    {
-        AdicionarPastaRecursiva(dir, folderItem.Children, folderItem);
-    }
-
-    // Arquivos de vídeo
-    foreach (var file in Directory.GetFiles(path)
-                                  .Where(f => new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(f)?.ToLower()))
-                                  .OrderBy(f => f))
-    {
-        var video = new VideoItem
+        private void TreeModules_DragOver(object sender, DragEventArgs e)
         {
-            Name = Path.GetFileName(file),
-            FullPath = file,
-            ParentFolder = folderItem,
-            IsChecked = videosAssistidos.Contains(file)
-        };
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        }
 
-        video.PropertyChanged += (s, e) =>
+        private void TreeModules_Drop(object sender, DragEventArgs e)
         {
-            if (e.PropertyName == nameof(VideoItem.IsChecked))
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+            foreach (var path in paths)
             {
-                if (video.IsChecked) videosAssistidos.Add(video.FullPath);
-                else videosAssistidos.Remove(video.FullPath);
-
-                AtualizarPais(video.ParentFolder);
-                SalvarEstado();
-                AtualizarProgresso();
+                if (Directory.Exists(path))
+                    CarregarPastaSeNaoExistir(path);
+                else if (File.Exists(path) && EhVideo(path))
+                    AdicionarVideoSeNaoExistir(path);
             }
-        };
 
-        folderItem.Children.Add(video);
-    }
+            AtualizarProgresso();
+        }
 
-    parent.Add(folderItem);
-    AtualizarCheckboxFolder(folderItem);
-    AtualizarNomeComProgresso(folderItem);
-}
+        private bool EhVideo(string path) => new[] { ".mp4", ".mkv", ".avi", ".mov" }
+                                              .Contains(Path.GetExtension(path)?.ToLower());
 
-private void Window_DragOver(object sender, DragEventArgs e)
-{
-    // Apenas arquivos ou pastas
-    if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        e.Effects = DragDropEffects.Copy;
-    else
-        e.Effects = DragDropEffects.None;
-
-    e.Handled = true;
-}
-
-private void Window_Drop(object sender, DragEventArgs e)
-{
-    if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
-
-    var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-
-    foreach (var path in paths)
-    {
-        if (Directory.Exists(path))
+        private void CarregarPastaSeNaoExistir(string path)
         {
-            // Evita duplicação
             bool jaExiste = TreeRoot.OfType<FolderItem>().Any(f => f.Name == Path.GetFileName(path));
             if (!jaExiste)
             {
-                CarregarPasta(path, TreeRoot, null); // mantém a ordenação numérica
-                txtFolderPath.Text = path;            // atualiza o textbox
-                SalvarUltimaPasta(path);             // salva a última pasta
+                CarregarPasta(path, TreeRoot, null);
+                txtFolderPath.Text = path;
+                SalvarUltimaPasta(path);
             }
         }
-        else if (File.Exists(path) && new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(path)?.ToLower()))
+
+        private void AdicionarVideoSeNaoExistir(string path)
         {
             bool jaExiste = TreeRoot.OfType<VideoItem>().Any(v => v.FullPath == path);
             if (!jaExiste)
             {
-                var video = new VideoItem
+                TreeRoot.Add(new VideoItem
                 {
                     Name = Path.GetFileName(path),
                     FullPath = path,
                     IsChecked = videosAssistidos.Contains(path)
-                };
-                TreeRoot.Add(video);
+                });
             }
         }
-    }
 
-    AtualizarProgresso();
-}
-
-        private void SalvarUltimaPasta(string path)
-        {
-            try
-            {
-                File.WriteAllText(pastaArquivo, path);
-            }
-            catch { }
-        }
-
+        // =====================================================
+        // 🔹 Carregamento de pastas e vídeos
+        // =====================================================
         private void CarregarPasta(string path, ObservableCollection<object> parent, FolderItem? parentFolder)
         {
             if (!Directory.Exists(path)) return;
 
-           var pastas = Directory.GetDirectories(path)
-    .OrderBy(d =>
-    {
-        string name = Path.GetFileName(d) ?? "";
-        return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
-    })
-    .ThenBy(d => Path.GetFileName(d));
-
-            foreach (var dir in pastas)
+            foreach (var dir in OrdenarNumericamente(Directory.GetDirectories(path)))
             {
                 try
                 {
-                    var folder = new FolderItem
-                    {
-                        Name = Path.GetFileName(dir) ?? "",
-                        Children = new ObservableCollection<object>(),
-                        ParentFolder = parentFolder
-                    };
-
-                    folder.PropertyChanged += (s, e) =>
-                    {
-                        if (e.PropertyName == nameof(FolderItem.IsChecked))
-                        {
-                            if (folder.IsChecked.HasValue)
-                                folder.MarcarFilhos(folder.IsChecked.Value);
-
-                            AtualizarPais(folder.ParentFolder);
-                            SalvarEstado();
-                            AtualizarProgresso();
-                        }
-                    };
-
+                    var folder = CriarFolderItem(dir, parentFolder);
                     CarregarPasta(dir, folder.Children, folder);
-
                     parent.Add(folder);
-
                     AtualizarCheckboxFolder(folder);
                     AtualizarNomeComProgresso(folder);
                 }
                 catch { }
             }
 
-            var arquivos = Directory.GetFiles(path)
-                .Where(f => new[] { ".mp4", ".mkv", ".avi", ".mov" }.Contains(Path.GetExtension(f)?.ToLower()))
-                .OrderBy(f =>
-                {
-                    string name = Path.GetFileNameWithoutExtension(f) ?? "";
-                    return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
-                })
-                .ThenBy(f => Path.GetFileName(f));
-
-            foreach (var file in arquivos)
+            foreach (var file in OrdenarNumericamente(Directory.GetFiles(path)).Where(EhVideo))
             {
                 try
                 {
-                    var video = new VideoItem
-                    {
-                        Name = Path.GetFileName(file) ?? "",
-                        FullPath = file,
-                        ParentFolder = parentFolder,
-                        IsChecked = videosAssistidos.Contains(file)
-                    };
-
-                    video.PropertyChanged += (s, e) =>
-                    {
-                        if (e.PropertyName == nameof(VideoItem.IsChecked))
-                        {
-                            if (video.IsChecked) videosAssistidos.Add(video.FullPath);
-                            else videosAssistidos.Remove(video.FullPath);
-
-                            AtualizarPais(video.ParentFolder);
-                            SalvarEstado();
-                            AtualizarProgresso();
-                        }
-                    };
-
+                    var video = CriarVideoItem(file, parentFolder);
                     parent.Add(video);
                 }
                 catch { }
             }
         }
-        #endregion
 
-        #region Atualização de checkboxes e progresso
+        private FolderItem CriarFolderItem(string dir, FolderItem? parentFolder)
+        {
+            var folder = new FolderItem
+            {
+                Name = Path.GetFileName(dir) ?? "",
+                Children = new ObservableCollection<object>(),
+                ParentFolder = parentFolder
+            };
+
+            folder.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(FolderItem.IsChecked))
+                {
+                    if (folder.IsChecked.HasValue)
+                        folder.MarcarFilhos(folder.IsChecked.Value);
+
+                    AtualizarPais(folder.ParentFolder);
+                    SalvarEstado();
+                    AtualizarProgresso();
+                }
+            };
+
+            return folder;
+        }
+
+        private VideoItem CriarVideoItem(string file, FolderItem? parentFolder)
+        {
+            var video = new VideoItem
+            {
+                Name = Path.GetFileName(file) ?? "",
+                FullPath = file,
+                ParentFolder = parentFolder,
+                IsChecked = videosAssistidos.Contains(file)
+            };
+
+            video.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(VideoItem.IsChecked))
+                {
+                    if (video.IsChecked) videosAssistidos.Add(video.FullPath);
+                    else videosAssistidos.Remove(video.FullPath);
+
+                    AtualizarPais(video.ParentFolder);
+                    SalvarEstado();
+                    AtualizarProgresso();
+                }
+            };
+
+            return video;
+        }
+
+        private IEnumerable<string> OrdenarNumericamente(IEnumerable<string> paths)
+        {
+            return paths.OrderBy(p =>
+            {
+                string name = Path.GetFileNameWithoutExtension(p) ?? "";
+                return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+            }).ThenBy(Path.GetFileName);
+        }
+
+        // =====================================================
+        // 🔹 Checkboxes e progresso
+        // =====================================================
         private void AtualizarCheckboxFolder(FolderItem folder)
         {
             if (folder == null) return;
@@ -355,12 +302,7 @@ private void Window_Drop(object sender, DragEventArgs e)
             int total = 0, marcados = 0;
             ContarVideos(folder, ref total, ref marcados);
 
-            if (total == 0 || marcados == 0)
-                folder.IsChecked = false;
-            else if (marcados == total)
-                folder.IsChecked = true;
-            else
-                folder.IsChecked = null;
+            folder.IsChecked = (marcados == 0 ? false : marcados == total ? true : null);
         }
 
         private void ContarVideos(FolderItem folder, ref int total, ref int marcados)
@@ -383,16 +325,9 @@ private void Window_Drop(object sender, DragEventArgs e)
 
             int total = 0, marcados = 0;
             ContarVideos(folder, ref total, ref marcados);
-
-            if (total == 0 || marcados == 0)
-                folder.IsChecked = false;
-            else if (marcados == total)
-                folder.IsChecked = true;
-            else
-                folder.IsChecked = null;
+            folder.IsChecked = (marcados == 0 ? false : marcados == total ? true : null);
 
             AtualizarNomeComProgresso(folder);
-
             AtualizarPais(folder.ParentFolder);
         }
 
@@ -420,62 +355,57 @@ private void Window_Drop(object sender, DragEventArgs e)
 
             int total = 0, marcados = 0;
             ContarVideos(folder, ref total, ref marcados);
+
             folder.DisplayName = $"{folder.Name.Split('(')[0].Trim()} ({marcados}/{total})";
 
             foreach (var item in folder.Children)
                 if (item is FolderItem f)
                     AtualizarNomeComProgresso(f);
         }
-        #endregion
 
-        #region Salvar/Carregar estado
+        // =====================================================
+        // 🔹 Salvar / carregar estado
+        // =====================================================
         private void SalvarEstado()
         {
-            try
-            {
-                File.WriteAllText(estadoArquivo, JsonConvert.SerializeObject(videosAssistidos.ToList()));
-            }
+            try { File.WriteAllText(estadoArquivo!, JsonConvert.SerializeObject(videosAssistidos.ToList())); }
             catch { }
         }
 
         private void CarregarEstado()
         {
-            if (!File.Exists(estadoArquivo)) return;
+            if (!File.Exists(estadoArquivo!)) return;
 
             try
             {
-                var lista = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(estadoArquivo));
-                if (lista != null)
-                    videosAssistidos = new HashSet<string>(lista);
+                var lista = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(estadoArquivo!));
+                if (lista != null) videosAssistidos = new HashSet<string>(lista);
             }
             catch { }
         }
-        #endregion
 
-        #region Último vídeo
+        // =====================================================
+        // 🔹 Último vídeo
+        // =====================================================
         private void SalvarUltimoVideo(string caminho)
         {
-            try
-            {
-                File.WriteAllText(ultimoVideoArquivo, caminho);
-            }
+            try { File.WriteAllText(ultimoVideoArquivo!, caminho); }
             catch { }
         }
-        #endregion
 
-        #region Reprodução de vídeos
-        private async void AbrirVideoMPVAsync(VideoItem? videoItem)
+        // =====================================================
+        // 🔹 Reprodução de vídeos
+        // =====================================================
+        private async Task ReproduzirVideosAsync(IEnumerable<VideoItem> videos)
         {
-            if (videoItem == null) return;
-
             cts = new CancellationTokenSource();
+
             try
             {
-                await Task.Run(() => PlayVideosListaAsync(new List<VideoItem> { videoItem }, cts.Token));
+                await Task.Run(() => PlayVideosLista(videos.ToList(), cts.Token));
             }
             catch (OperationCanceledException)
             {
-                // Cancelamento intencional — não exibe mensagem
                 lblVideoAtual.Content = "";
             }
             catch (Exception ex)
@@ -484,7 +414,7 @@ private void Window_Drop(object sender, DragEventArgs e)
             }
         }
 
-        private void PlayVideosListaAsync(List<VideoItem> videos, CancellationToken token)
+        private void PlayVideosLista(List<VideoItem> videos, CancellationToken token)
         {
             foreach (var video in videos)
             {
@@ -493,8 +423,7 @@ private void Window_Drop(object sender, DragEventArgs e)
                 Dispatcher.Invoke(() =>
                 {
                     video.IsChecked = true;
-                    if (!videosAssistidos.Contains(video.FullPath))
-                        videosAssistidos.Add(video.FullPath);
+                    if (!videosAssistidos.Contains(video.FullPath)) videosAssistidos.Add(video.FullPath);
                     SalvarEstado();
                     AtualizarProgresso();
                     SalvarUltimoVideo(video.FullPath);
@@ -526,96 +455,16 @@ private void Window_Drop(object sender, DragEventArgs e)
 
         private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
         {
-            if (item is VideoItem v)
-                yield return v;
+            if (item is VideoItem v) yield return v;
             else if (item is FolderItem f)
-            {
                 foreach (var child in f.Children)
                     foreach (var vid in ObterVideosRecursivo(child))
                         yield return vid;
-            }
-        }
-        #endregion
-
-        #region Botão Refresh
-        private void BtnRefresh_Click(object sender, RoutedEventArgs e)
-        {
-            string path = txtFolderPath.Text;
-            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
-            {
-                MessageBox.Show("Selecione uma pasta válida antes de atualizar.");
-                return;
-            }
-
-            TreeRoot.Clear();
-            try
-            {
-                CarregarPasta(path, TreeRoot, null);
-                AtualizarProgresso();
-                MessageBox.Show("Lista de vídeos atualizada!");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erro ao atualizar a lista: {ex.Message}");
-            }
-        }
-        #endregion
-
-        #region Botões Play/Pause/Stop
-        private async void BtnPlayModule_Click(object sender, RoutedEventArgs e)
-        {
-            if (treeModules.SelectedItem == null)
-            {
-                MessageBox.Show("Selecione um módulo ou pasta na TreeView.");
-                return;
-            }
-
-            List<VideoItem> videos = new List<VideoItem>();
-            if (treeModules.SelectedItem is FolderItem folder)
-                videos = ObterVideosRecursivo(folder).ToList();
-            else if (treeModules.SelectedItem is VideoItem video)
-                videos.Add(video);
-
-            if (videos.Count == 0)
-            {
-                MessageBox.Show("Não há vídeos neste módulo.");
-                return;
-            }
-
-            cts = new CancellationTokenSource();
-            try
-            {
-                await Task.Run(() => PlayVideosListaAsync(videos, cts.Token));
-            }
-            catch (OperationCanceledException)
-            {
-                lblVideoAtual.Content = "";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Erro ao reproduzir o módulo: {ex.Message}");
-            }
         }
 
-        private void BtnPause_Click(object sender, RoutedEventArgs e)
-        {
-            cts?.Cancel();
-        }
-
-        private void BtnStop_Click(object sender, RoutedEventArgs e)
-        {
-            cts?.Cancel();
-
-            foreach (var proc in Process.GetProcessesByName("mpv"))
-            {
-                try { proc.Kill(); } catch { }
-            }
-
-            lblVideoAtual.Content = "";
-        }
-        #endregion
-
-        #region Botão "Assistir próxima aula"
+        // =====================================================
+        // 🔹 Próxima aula
+        // =====================================================
         private async void BtnNextVideo_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -627,7 +476,7 @@ private void Window_Drop(object sender, DragEventArgs e)
                     return;
                 }
 
-                string ultimo = File.Exists(ultimoVideoArquivo) ? File.ReadAllText(ultimoVideoArquivo) : "";
+                string ultimo = File.Exists(ultimoVideoArquivo!) ? File.ReadAllText(ultimoVideoArquivo!) : "";
                 int indexUltimo = todosVideos.FindIndex(v => v.FullPath == ultimo);
 
                 List<VideoItem> proximosVideos;
@@ -642,19 +491,43 @@ private void Window_Drop(object sender, DragEventArgs e)
                     return;
                 }
 
-                cts = new CancellationTokenSource();
-                await Task.Run(() => PlayVideosListaAsync(proximosVideos, cts.Token));
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelamento intencional — sem mensagem de erro
-                lblVideoAtual.Content = "";
+                await ReproduzirVideosAsync(proximosVideos);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Erro ao tentar reproduzir próxima aula: {ex.Message}");
+                MessageBox.Show($"Erro ao reproduzir próxima aula: {ex.Message}");
             }
         }
-        #endregion
+
+        // =====================================================
+        // 🔹 Parar reprodução
+        // =====================================================
+        private void BtnStop_Click(object sender, RoutedEventArgs e)
+        {
+            cts?.Cancel();
+
+            foreach (var proc in Process.GetProcessesByName("mpv"))
+            {
+                try { proc.Kill(); } catch { }
+            }
+
+            lblVideoAtual.Content = "";
+        }
+
+        // =====================================================
+        // 🔹 Botão Atualizar lista
+        // =====================================================
+        private void BtnRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            string path = txtFolderPath.Text;
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            {
+                MessageBox.Show("Selecione uma pasta válida antes de atualizar.");
+                return;
+            }
+
+            CarregarPastaComProgresso(path);
+            MessageBox.Show("Lista de vídeos atualizada!");
+        }
     }
 }
