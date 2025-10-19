@@ -579,5 +579,34 @@ namespace GerenciadorAulas
                 _reproducaoContinua = configuracoes.ReproducaoContinua;
             }
         }
+        // =====================================================
+        // 🔹 Botão Limpa pasta
+        // =====================================================
+private void BtnRemoveFolder_Click(object sender, RoutedEventArgs e)
+{
+    // Limpa o TextBox
+    txtFolderPath.Text = "";
+
+    // Limpa a TreeView
+    TreeRoot.Clear();
+    AtualizarProgresso();
+
+    // Remove o arquivo da última pasta
+    if (File.Exists(pastaArquivo!))
+    {
+        try
+        {
+            File.Delete(pastaArquivo!);
+        }
+        catch
+        {
+            MessageBox.Show("Não foi possível remover o registro da última pasta.");
+        }
+    }
+
+    MessageBox.Show("Pasta principal removida.");
+}
+
+
     }
 }
