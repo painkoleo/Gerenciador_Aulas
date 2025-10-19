@@ -1,23 +1,8 @@
-﻿<!--
-=====================================================
-🧠 GERENCIADOR DE AULAS - INTERFACE PRINCIPAL (MainWindow.xaml)
-Versão: 1.6 - Comentada Didaticamente
-=====================================================
-Descrição:
-Esta janela exibe:
- - Seletor de pasta + caminho
- - Botões de controle (reproduzir, próxima aula, parar, atualizar)
- - TreeView de pastas e vídeos
- - Barra de progresso
- - Indicação do vídeo atual em reprodução
- - Suporte a Drag & Drop
--->
-
-<Window x:Class="GerenciadorAulas.MainWindow"
+﻿<Window x:Class="GerenciadorAulas.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:GerenciadorAulas"
-        Title="Gerenciador de Aulas 1.4.1"
+        Title="Gerenciador de Aulas 1.5"
         Height="720"
         Width="850"
         Background="#1e1e1e"
@@ -112,6 +97,16 @@ Esta janela exibe:
         <Image Source="pack://application:,,,/Resources/stop.png"
                Stretch="Uniform"/>
     </Button>
+
+    <!-- ⚙ Configurações -->
+<Button Width="45" Height="35"
+        Background="#607D8B"
+        ToolTip="Configurações"
+        Click="BtnConfig_Click"
+        Margin="0,0,10,0">
+    <Image Source="pack://application:,,,/Resources/settings.png"
+           Stretch="Uniform"/>
+</Button>
 
     <!-- 🔄 Atualizar lista -->
     <Button Width="45" Height="35"

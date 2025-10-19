@@ -27,6 +27,9 @@ namespace GerenciadorAulas
         public ObservableCollection<object> TreeRoot { get; set; } = new ObservableCollection<object>();
         public RelayCommand<VideoItem?> PlayCommand { get; }
 
+        private Configuracoes configuracoes;
+        private bool _reproducaoContinua = true;
+
         // =====================================================
         // 🔹 Construtor
         // =====================================================
@@ -44,6 +47,19 @@ namespace GerenciadorAulas
             InicializarArquivosConfiguracao();
             CarregarEstado();
             CarregarUltimaPasta();
+
+            // Carregar configurações
+            configuracoes = ConfigManager.Carregar();
+
+            // Aplicar pasta padrão, se existir
+            if (Directory.Exists(configuracoes.PastaPadrao))
+            {
+                txtFolderPath.Text = configuracoes.PastaPadrao;
+                CarregarPastaComProgresso(configuracoes.PastaPadrao);
+            }
+
+            // Aplicar configuração de reprodução contínua
+            _reproducaoContinua = configuracoes.ReproducaoContinua;
         }
 
         // =====================================================
@@ -394,7 +410,7 @@ namespace GerenciadorAulas
         }
 
         // =====================================================
-        // 🔹 Reprodução de vídeos
+        // 🔹 Reprodução de vídeos (MPV fullscreen configurável)
         // =====================================================
         private async Task ReproduzirVideosAsync(IEnumerable<VideoItem> videos)
         {
@@ -432,10 +448,12 @@ namespace GerenciadorAulas
 
                 try
                 {
+                    string args = (configuracoes.MPVFullscreen ? "--fullscreen " : "") + $"\"{video.FullPath}\"";
+
                     using var mpv = Process.Start(new ProcessStartInfo
                     {
-                        FileName = @"C:\Program Files (x86)\mpv\mpv.exe",
-                        Arguments = $"\"{video.FullPath}\"",
+                        FileName = configuracoes.MPVPath,
+                        Arguments = args,
                         UseShellExecute = false
                     });
 
@@ -480,10 +498,18 @@ namespace GerenciadorAulas
                 int indexUltimo = todosVideos.FindIndex(v => v.FullPath == ultimo);
 
                 List<VideoItem> proximosVideos;
-                if (indexUltimo >= 0)
-                    proximosVideos = todosVideos.Skip(indexUltimo + 1).Where(v => !v.IsChecked).ToList();
+                if (_reproducaoContinua)
+                {
+                    proximosVideos = indexUltimo >= 0
+                        ? todosVideos.Skip(indexUltimo + 1).ToList()
+                        : todosVideos;
+                }
                 else
-                    proximosVideos = todosVideos.Where(v => !v.IsChecked).ToList();
+                {
+                    proximosVideos = indexUltimo >= 0
+                        ? todosVideos.Skip(indexUltimo + 1).Where(v => !v.IsChecked).Take(1).ToList()
+                        : todosVideos.Where(v => !v.IsChecked).Take(1).ToList();
+                }
 
                 if (proximosVideos.Count == 0)
                 {
@@ -528,6 +554,30 @@ namespace GerenciadorAulas
 
             CarregarPastaComProgresso(path);
             MessageBox.Show("Lista de vídeos atualizada!");
+        }
+
+        // =====================================================
+        // 🔹 Botão Configurações
+        // =====================================================
+        private void BtnConfig_Click(object sender, RoutedEventArgs e)
+        {
+            var window = new ConfigWindow(configuracoes)
+            {
+                Owner = this
+            };
+
+            if (window.ShowDialog() == true)
+            {
+                // Reaplicar pasta padrão
+                if (Directory.Exists(configuracoes.PastaPadrao))
+                {
+                    txtFolderPath.Text = configuracoes.PastaPadrao;
+                    CarregarPastaComProgresso(configuracoes.PastaPadrao);
+                }
+
+                // Atualizar reprodução contínua
+                _reproducaoContinua = configuracoes.ReproducaoContinua;
+            }
         }
     }
 }
