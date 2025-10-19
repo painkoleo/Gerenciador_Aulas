@@ -22,7 +22,6 @@
 O **Gerenciador de Aulas** é uma ferramenta para organizar e acompanhar vídeos de cursos ou aulas.
 Permite selecionar pastas de vídeos, marcar aulas assistidas, reproduzir vídeos com MPV, e acompanhar o progresso de forma automática.
 
-[Voltar ao índice](#índice)
 ---
 ## Features
 - 📂 **Seleção de pastas** – Adicione a pasta principal com todas as aulas.
@@ -35,7 +34,6 @@ Permite selecionar pastas de vídeos, marcar aulas assistidas, reproduzir vídeo
 - 🔄 **Atualizar lista** – Atualiza TreeView sem precisar reiniciar.
 - ❌ **Remover pasta principal** – Limpa toda a lista de vídeos e registros.
 
-[Voltar ao índice](#índice)
 ---
 
 ## Tecnologias Utilizadas
@@ -50,7 +48,6 @@ O Gerenciador de Aulas foi desenvolvido com as seguintes tecnologias:
   - `Newtonsoft.Json` – Serialização e desserialização de JSON.
   - `Ookii.Dialogs.Wpf` – Para diálogos de seleção de pasta com aparência moderna.
 
-[Voltar ao índice](#índice)
 ---
 
 ## Documentação Técnica
