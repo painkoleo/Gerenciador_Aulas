@@ -39,7 +39,7 @@ Permite selecionar pastas de vídeos, marcar aulas assistidas, reproduzir vídeo
 ## Tecnologias Utilizadas
 O Gerenciador de Aulas foi desenvolvido com as seguintes tecnologias:
 
-- 🇨🇳 **C#** – Linguagem principal do programa.
+- **C#** – Linguagem principal do programa.
 - 🖥️ **WPF (Windows Presentation Foundation)** – Framework para criar a interface gráfica moderna e responsiva.
 - 🏗️ **MVVM parcial** – Para organizar o código e facilitar o binding da interface.
 - 📄 **JSON** – Para salvar configurações e estado do usuário (vídeos assistidos, última pasta, último vídeo).
