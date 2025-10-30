@@ -1,61 +1,72 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
+using System.Windows;
 
 namespace GerenciadorAulas
 {
-    public class FolderItem : INotifyPropertyChanged
+    // Nota: Esta classe implementa INotifyPropertyChanged diretamente para permitir que objetos
+    // File/Folder sejam marcados de forma segura, mesmo se a atualização vier de um thread em segundo plano.
+    public class FolderItem : INotifyPropertyChanged, IHaveFullPath
     {
-        private string name = "";
-        private bool? isChecked = false;
-        private string displayName = "";
+        private bool? _isChecked = false;
+        private bool _isExpanded = false;
+        private string _displayName = string.Empty;
 
-        public string Name
-        {
-            get => name;
-            set { name = value; OnPropertyChanged(nameof(Name)); }
-        }
-
-        // Nome exibido com progresso (Módulo 1 (3/5))
-        public string DisplayName
-        {
-            get => displayName;
-            set { displayName = value; OnPropertyChanged(nameof(DisplayName)); }
-        }
-
-        public string FullPath { get; set; } = "";
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = string.Empty;
+        public ObservableCollection<object> Children { get; set; } = new ObservableCollection<object>();
         public FolderItem? ParentFolder { get; set; }
 
-        public ObservableCollection<object> Children { get; set; } = new ObservableCollection<object>();
+        public string DisplayName
+        {
+            get => _displayName;
+            set
+            {
+                if (_displayName != value)
+                {
+                    _displayName = value;
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
+        }
 
         public bool? IsChecked
         {
-            get => isChecked;
+            get => _isChecked;
             set
             {
-                if (isChecked != value)
+                if (_isChecked != value)
                 {
-                    isChecked = value;
+                    _isChecked = value;
                     OnPropertyChanged(nameof(IsChecked));
                 }
             }
         }
 
-        /// <summary>
-        /// Marca todos os filhos recursivamente
-        /// </summary>
-        public void MarcarFilhos(bool marcar)
+        public bool IsExpanded
         {
-            foreach (var item in Children)
+            get => _isExpanded;
+            set
             {
-                if (item is VideoItem v)
+                if (_isExpanded != value)
                 {
-                    v.IsChecked = marcar;
+                    _isExpanded = value;
+                    OnPropertyChanged(nameof(IsExpanded));
                 }
-                else if (item is FolderItem f)
-                {
-                    f.IsChecked = marcar;
-                    f.MarcarFilhos(marcar);
-                }
+            }
+        }
+
+        public void MarcarFilhos(bool isChecked)
+        {
+            foreach (var child in Children.OfType<FolderItem>())
+            {
+                child.IsChecked = isChecked;
+                child.MarcarFilhos(isChecked);
+            }
+            foreach (var child in Children.OfType<VideoItem>())
+            {
+                child.IsChecked = isChecked;
             }
         }
 
@@ -63,7 +74,17 @@ namespace GerenciadorAulas
 
         protected void OnPropertyChanged(string propertyName)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                });
+            }
+            else
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
         }
     }
 }

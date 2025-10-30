@@ -1,0 +1,55 @@
+<Window x:Class="GerenciadorAulas.FolderProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:GerenciadorAulas"
+        Title="Progresso das Pastas"
+        Height="400" Width="400"
+        Background="#1e1e1e" Foreground="White"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ListView mostrando progresso de cada pasta -->
+        <ListView x:Name="lvFolders" Grid.Row="0"
+                  ItemsSource="{Binding FolderProgressList}"
+                  Background="#1f1f1f" BorderThickness="0"
+                  Foreground="White" Margin="0,0,0,10">
+            <ListView.ItemTemplate>
+                <DataTemplate DataType="{x:Type local:FolderProgressItem}">
+                    <Grid Margin="5">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="25"/> <!-- altura fixa para barra -->
+                        </Grid.RowDefinitions>
+                        <!-- Nome da pasta com reticências se longo -->
+                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip="{Binding Name}"/>
+
+                        <!-- Barra de progresso com largura limitada -->
+                        <ProgressBar Grid.Row="1"
+                                     Value="{Binding Progress}"
+                                     Minimum="0" Maximum="100"
+                                     Height="25"
+                                     Width="300"
+                                     HorizontalAlignment="Left"
+                                     Foreground="#0e639c"
+                                     Background="#2a2a2a"
+                                     Margin="0,5,0,0"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Botão fechar -->
+        <Button Grid.Row="1" Content="Fechar" Width="80" Height="28"
+                HorizontalAlignment="Right" Click="BtnClose_Click"
+                Background="#0e639c" Foreground="White" BorderThickness="0"
+                Margin="0,10,0,0" Cursor="Hand"/>
+    </Grid>
+</Window>

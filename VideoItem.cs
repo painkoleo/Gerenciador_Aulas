@@ -1,29 +1,24 @@
 using System.ComponentModel;
+using System.Windows;
 
 namespace GerenciadorAulas
 {
-    public class VideoItem : INotifyPropertyChanged
+    public class VideoItem : INotifyPropertyChanged, IHaveFullPath
     {
-        private string name = "";
-        private bool isChecked = false;
+        private bool _isChecked = false;
 
-        public string Name
-        {
-            get => name;
-            set { name = value; OnPropertyChanged(nameof(Name)); }
-        }
-
-        public string FullPath { get; set; } = "";
+        public string Name { get; set; } = string.Empty;
+        public string FullPath { get; set; } = string.Empty;
         public FolderItem? ParentFolder { get; set; }
 
         public bool IsChecked
         {
-            get => isChecked;
+            get => _isChecked;
             set
             {
-                if (isChecked != value)
+                if (_isChecked != value)
                 {
-                    isChecked = value;
+                    _isChecked = value;
                     OnPropertyChanged(nameof(IsChecked));
                 }
             }
@@ -33,7 +28,18 @@ namespace GerenciadorAulas
 
         protected void OnPropertyChanged(string propertyName)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            // Garante que a notificação aconteça no thread da UI
+            if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                });
+            }
+            else
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
         }
     }
 }
