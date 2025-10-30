@@ -60,7 +60,7 @@ O progresso é rastreado através da `TreeView` e da caixa de seleção (checkbo
 * **Marcar como Assistido:** Clique na **checkbox** ao lado de um vídeo para marcá-lo como assistido. O sistema salva esse estado automaticamente.
 * **Progresso em Pasta:** Quando um vídeo é marcado/desmarcado, o sistema propaga a mudança para a pasta pai, atualizando o progresso exibido no nome da pasta (ex: `Módulo 1 (5/10)`).
 * **Checkbox Indeterminada:** Se uma pasta contém alguns vídeos assistidos e outros não, a checkbox da pasta ficará em um **estado misto (hífen)**.
-* **Progresso Geral:** A barra de progresso na parte inferior da tela mostra o percentual total de vídeos assistidos em toda a sua coleção.
+
 
 ### 2.3. Controles de Reprodução
 
