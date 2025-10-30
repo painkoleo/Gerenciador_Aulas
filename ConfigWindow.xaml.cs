@@ -13,23 +13,11 @@ namespace GerenciadorAulas
             _config = config;
 
             // Carregar valores atuais
-            txtPastaPadrao.Text = _config.PastaPadrao;
             chkReproducaoContinua.IsChecked = _config.ReproducaoContinua;
             chkFullscreenMPV.IsChecked = _config.MPVFullscreen;
             txtMPVPath.Text = _config.MPVPath;
         }
 
-        private void BtnSelecionarPasta_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new VistaFolderBrowserDialog
-            {
-                Description = "Selecione a pasta padrão",
-                UseDescriptionForTitle = true
-            };
-
-            if (dialog.ShowDialog(this) == true)
-                txtPastaPadrao.Text = dialog.SelectedPath;
-        }
 
         private void BtnSelecionarMPV_Click(object sender, RoutedEventArgs e)
         {
@@ -45,7 +33,6 @@ namespace GerenciadorAulas
 
         private void BtnSalvar_Click(object sender, RoutedEventArgs e)
         {
-            _config.PastaPadrao = txtPastaPadrao.Text;
             _config.ReproducaoContinua = chkReproducaoContinua.IsChecked ?? true;
             _config.MPVFullscreen = chkFullscreenMPV.IsChecked ?? true;
             _config.MPVPath = txtMPVPath.Text;
