@@ -61,7 +61,6 @@ O progresso é rastreado através da `TreeView` e da caixa de seleção (checkbo
 * **Progresso em Pasta:** Quando um vídeo é marcado/desmarcado, o sistema propaga a mudança para a pasta pai, atualizando o progresso exibido no nome da pasta (ex: `Módulo 1 (5/10)`).
 * **Checkbox Indeterminada:** Se uma pasta contém alguns vídeos assistidos e outros não, a checkbox da pasta ficará em um **estado misto (hífen)**.
 
-
 ### 2.3. Controles de Reprodução
 
 Os controles de mídia na barra de ferramentas permitem gerenciar a reprodução de vídeos:
@@ -70,9 +69,7 @@ Os controles de mídia na barra de ferramentas permitem gerenciar a reprodução
 | :--- | :--- | :--- |
 | **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. |
 | **Stop** | Parar | Finaliza o player MPV e encerra a reprodução contínua. |
-| **Next** | Próximo | Para o vídeo atual e inicia o **próximo vídeo não assistido** disponível na ordem da lista. |
-
-> **Dica:** O sistema pode ser configurado para iniciar automaticamente o próximo vídeo após a conclusão de um (Reprodução Contínua), veja a seção de Configurações.
+| **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
 
 ### 2.4. Configurações (Player MPV)
 
@@ -111,7 +108,6 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 | `TreeRoot` | `ObservableCollection<object>` | A fonte de dados principal para a `TreeView`. |
 | `Configuracoes` | `Configuracoes` | Opções do aplicativo (ex: caminho do MPV, tela cheia, reprodução contínua). |
 | `VideoAtual` | `string` | Exibe o nome do vídeo que está em reprodução. |
-| `ProgressoGeral` | `double` | Progresso total de vídeos assistidos (de 0 a 100%). |
 | `IsManuallyStopped` | `bool` | Flag para indicar se a reprodução foi interrompida pelo usuário. |
 | `IsLoading` | `bool` | Indica que uma operação longa (como I/O de arquivos) está em andando. |
 
@@ -120,10 +116,9 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 | Comando | Função |
 | :--- | :--- |
 | `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o primeiro vídeo não assistido na pasta. |
-| `NextVideoCommand` | Interrompe o vídeo atual e inicia o próximo vídeo não assistido na ordem da `TreeView`. |
 | `StopPlaybackCommand` | Finaliza o processo `mpv.exe` e reseta o estado de reprodução. |
 | `AddFoldersCommand` | Lida com a adição de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
-| `RefreshListCommand` | Recarrega a estrutura da `TreeView` e restaura o estado de progresso. |
+| `RefreshListCommand` | Recarrega a estrutura da `TreeView` e restaura o estado de progresso salvo no disco. |
 | `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo. |
 
 ### 4.3. Mecanismo de Reprodução de Mídia
@@ -132,40 +127,4 @@ A reprodução é gerida pelo método `ReproduzirVideosAsync`, que utiliza o `Sy
 
 1.  **Assincronicidade:** A reprodução é encapsulada em um `Task.Run` para garantir que o **Thread de UI** não seja bloqueado.
 2.  **Controle de Fluxo:** Utiliza um `CancellationTokenSource` (`cts`) para permitir que o usuário interrompa o loop de reprodução contínua.
-3.  **Processo MPV:** O método `PlayVideosLista` inicia o `mpv.exe` com o caminho do vídeo e argumentos de configuração (ex: `--fullscreen`). A aplicação espera a saída do processo (`mpvProcess.WaitForExit()`).
-4.  **Reprodução Contínua:** Se a configuração estiver ativa, ao final de um vídeo, `BtnNextVideo_Click` é invocado para localizar e iniciar o próximo vídeo na sequência.
-
-## 5. Gerenciamento e Persistência de Estado
-
-O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões.
-
-### 5.1. Arquivos de Persistência
-
-| Arquivo | Conteúdo | Método de Persistência |
-| :--- | :--- | :--- |
-| `videos_assistidos.json` | Uma lista simples (`string[]`) de caminhos de arquivos de vídeos assistidos. | `SalvarEstadoVideosAssistidos` |
-| `estadoTreeView.json` | Armazena a estrutura da `TreeView` e o estado de expansão das pastas. | `SalvarEstadoTreeView` |
-| `ultimo_video.json` | O caminho completo do último vídeo que foi iniciado. | `SalvarUltimoVideo` |
-| `configuracoes.json` | Armazena as configurações globais (caminho do player, fullscreen, etc.). | `ConfigManager.Salvar` |
-
-### 5.2. Rastreamento de Progresso
-
-* **Atualização em Cascata (`AtualizarPais`):** Quando a propriedade `IsChecked` de um `VideoItem` muda, a alteração é propagada recursivamente para seus pais (`FolderItem`).
-* **Progresso de Pasta:** Cada `FolderItem` calcula dinamicamente seu progresso (ex: "Nome da Pasta (10/12)") com base no número de vídeos assistidos em seus filhos.
-* **Estado Misto:** Um `FolderItem` utiliza o estado de *checkbox* **indeterminado** (ou `null`) quando alguns, mas não todos, os vídeos em sua hierarquia estão marcados.
-
-## 6. Serviços e Injeção de Dependência
-
-### 6.1. LogService (`LogService.cs`)
-
-O `LogService` é uma classe estática utilizada para centralizar o registro de eventos e erros do sistema.
-
-* **Função:** Escreve mensagens com *timestamp* no arquivo `log.txt`, localizado na mesma pasta do executável.
-* **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
-
-### 6.2. IWindowManager (Gerenciamento de Janelas)
-
-O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (`ConfigWindow`, `FolderProgressWindow`) e caixas de diálogo do sistema.
-
-* A interface `IWindowManager` abstrai as chamadas de UI.
-* O `MainWindowViewModel` recebe uma instância de `IWindowManager` em seu construtor, o que facilita a testabilidade da aplicação.
+3.  **Processo MPV:** O
