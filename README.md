@@ -127,4 +127,40 @@ A reprodução é gerida pelo método `ReproduzirVideosAsync`, que utiliza o `Sy
 
 1.  **Assincronicidade:** A reprodução é encapsulada em um `Task.Run` para garantir que o **Thread de UI** não seja bloqueado.
 2.  **Controle de Fluxo:** Utiliza um `CancellationTokenSource` (`cts`) para permitir que o usuário interrompa o loop de reprodução contínua.
-3.  **Processo MPV:** O
+3.  **Processo MPV:** O método `PlayVideosLista` inicia o `mpv.exe` com o caminho do vídeo e argumentos de configuração (ex: `--fullscreen`). A aplicação espera a saída do processo (`mpvProcess.WaitForExit()`).
+4.  **Reprodução Contínua:** Se a configuração estiver ativa, o sistema verifica a lista de vídeos para iniciar o próximo item após o término do vídeo atual.
+
+## 5. Gerenciamento e Persistência de Estado
+
+O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões.
+
+### 5.1. Arquivos de Persistência
+
+| Arquivo | Conteúdo | Método de Persistência |
+| :--- | :--- | :--- |
+| `videos_assistidos.json` | Uma lista simples (`string[]`) de caminhos de arquivos de vídeos assistidos. | `SalvarEstadoVideosAssistidos` |
+| `estadoTreeView.json` | Armazena a estrutura da `TreeView` e o estado de expansão das pastas. | `SalvarEstadoTreeView` |
+| `ultimo_video.json` | O caminho completo do último vídeo que foi iniciado. | `SalvarUltimoVideo` |
+| `configuracoes.json` | Armazena as configurações globais (caminho do player, fullscreen, etc.). | `ConfigManager.Salvar` |
+
+### 5.2. Rastreamento de Progresso
+
+* **Atualização em Cascata (`AtualizarPais`):** Quando a propriedade `IsChecked` de um `VideoItem` muda, a alteração é propagada recursivamente para seus pais (`FolderItem`).
+* **Progresso de Pasta:** Cada `FolderItem` calcula dinamicamente seu progresso (ex: "Nome da Pasta (10/12)") com base no número de vídeos assistidos em seus filhos.
+* **Estado Misto:** Um `FolderItem` utiliza o estado de *checkbox* **indeterminado** (ou `null`) quando alguns, mas não todos, os vídeos em sua hierarquia estão marcados.
+
+## 6. Serviços e Injeção de Dependência
+
+### 6.1. LogService (`LogService.cs`)
+
+O `LogService` é uma classe estática utilizada para centralizar o registro de eventos e erros do sistema.
+
+* **Função:** Escreve mensagens com *timestamp* no arquivo `log.txt`, localizado na mesma pasta do executável.
+* **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
+
+### 6.2. IWindowManager (Gerenciamento de Janelas)
+
+O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (`ConfigWindow`, `FolderProgressWindow`) e caixas de diálogo do sistema.
+
+* A interface `IWindowManager` abstrai as chamadas de UI.
+* O `MainWindowViewModel` recebe uma instância de `IWindowManager` em seu construtor, o que facilita a testabilidade da aplicação.
