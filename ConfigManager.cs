@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using GerenciadorAulas.Services;
 
 namespace GerenciadorAulas
 {
@@ -21,7 +22,10 @@ namespace GerenciadorAulas
                 var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(arquivoConfig, json);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogService.Log($"Erro ao salvar configuracoes: {ex.Message}");
+            }
         }
 
         public static Configuracoes Carregar()
@@ -34,8 +38,9 @@ namespace GerenciadorAulas
                 var json = File.ReadAllText(arquivoConfig);
                 return JsonSerializer.Deserialize<Configuracoes>(json) ?? new Configuracoes();
             }
-            catch
+            catch (Exception ex)
             {
+                LogService.Log($"Erro ao carregar configuracoes: {ex.Message}");
                 return new Configuracoes();
             }
         }

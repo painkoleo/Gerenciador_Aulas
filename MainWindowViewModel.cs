@@ -525,6 +525,16 @@ namespace GerenciadorAulas
         // ----------------------------------------------------
         public async Task ReproduzirVideosAsync(IEnumerable<VideoItem> videos)
         {
+            // Validação do MPV antes de qualquer outra coisa
+            if (!IsMpvPathValid())
+            {
+                _windowManager?.ShowMessageBox("O caminho para o executável do MPV não foi configurado ou é inválido. Por favor, configure-o agora.");
+                _windowManager?.ShowConfigWindow(Configuracoes);
+
+                // Re-valida após o usuário (potencialmente) corrigir o caminho.
+                if (!IsMpvPathValid()) return;
+            }
+
             // O comando Play (PlaySelectedItemCommand) já deve ter garantido que IsManuallyStopped = false.
             // REMOVIDA a checagem if (IsManuallyStopped), que estava bloqueando o Play após um Stop.
 
@@ -585,13 +595,10 @@ namespace GerenciadorAulas
                     VideoAtual = $"Reproduzindo: {video.Name}";
                 });
 
-                // Verificação de nulidade para MPVPath
-                if (string.IsNullOrEmpty(Configuracoes.MPVPath) || !File.Exists(Configuracoes.MPVPath))
+                // A validação principal agora é feita em ReproduzirVideosAsync.
+                // Esta é uma última verificação de segurança.
+                if (!IsMpvPathValid())
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _windowManager?.ShowMessageBox("Caminho do MPV não configurado ou incorreto. Verifique Configurações.");
-                    });
                     throw new InvalidOperationException("Caminho do MPV inválido.");
                 }
 
@@ -619,6 +626,11 @@ namespace GerenciadorAulas
                     });
                 }
             }
+        }
+
+        private bool IsMpvPathValid()
+        {
+            return !string.IsNullOrEmpty(Configuracoes.MPVPath) && File.Exists(Configuracoes.MPVPath);
         }
 
         // Funções Auxiliares (mantidas para a funcionalidade da TreeView)

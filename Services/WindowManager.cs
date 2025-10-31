@@ -1,32 +1,28 @@
-// Nome do arquivo: Services/WindowManager.cs
-
 using System.Windows;
 using GerenciadorAulas;
 using Ookii.Dialogs.Wpf;
 
 namespace GerenciadorAulas.Services
 {
-    // A implementação concreta que lida com a UI de janelas/diálogos.
+    // A implementação concreta e unificada que lida com a UI de janelas/diálogos.
     public class WindowManager : IWindowManager
     {
-        private readonly Window _owner; // Referência à MainWindow para diálogos modais
-
-        public WindowManager(Window owner)
+        // Construtor vazio, não depende mais de uma janela específica.
+        public WindowManager()
         {
-            _owner = owner;
         }
 
         public string? OpenFolderDialog()
         {
-            // Lógica que estava em MainWindow.xaml.cs
             var dialog = new VistaFolderBrowserDialog
             {
-                Description = "Selecione pastas para adicionar",
+                Description = "Selecione a pasta de aulas",
                 UseDescriptionForTitle = true,
-                ShowNewFolderButton = false
+                ShowNewFolderButton = true
             };
 
-            if (dialog.ShowDialog(_owner) == true)
+            // Usa a janela principal da aplicação como "owner"
+            if (dialog.ShowDialog(Application.Current.MainWindow) == true)
             {
                 return dialog.SelectedPath;
             }
@@ -35,23 +31,25 @@ namespace GerenciadorAulas.Services
 
         public void ShowConfigWindow(Configuracoes config)
         {
-            var configWindow = new ConfigWindow(config);
-            configWindow.Owner = _owner;
+            var configWindow = new ConfigWindow(config)
+            {
+                Owner = Application.Current.MainWindow
+            };
             configWindow.ShowDialog();
         }
 
         public void ShowFolderProgressWindow(MainWindowViewModel viewModel)
         {
-            // Note que seu projeto tem FolderProgressWindow.xaml e ProgressWindow.xaml.
-            // Vou usar FolderProgressWindow, baseado nos nomes no seu ViewModel.
-            var progressWindow = new FolderProgressWindow(viewModel);
-            progressWindow.Owner = _owner;
+            var progressWindow = new FolderProgressWindow(viewModel)
+            {
+                Owner = Application.Current.MainWindow
+            };
             progressWindow.ShowDialog();
         }
 
         public void ShowMessageBox(string message)
-        {
-            MessageBox.Show(_owner, message);
+        { 
+            MessageBox.Show(Application.Current.MainWindow, message, "Gerenciador de Aulas", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
