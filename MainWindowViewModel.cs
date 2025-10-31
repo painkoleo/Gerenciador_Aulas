@@ -448,7 +448,11 @@ namespace GerenciadorAulas
                         });
                     }
                 }
-                catch (Exception ex) { LogService.Log($"Erro ao carregar pasta {dir}: {ex.Message}"); }
+                catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar pasta {dir}: {ex.Message}", ex); }
+                catch (PathTooLongException ex) { LogService.LogError($"Caminho muito longo ao carregar pasta {dir}: {ex.Message}", ex); }
+                catch (DirectoryNotFoundException ex) { LogService.LogError($"Pasta não encontrada ao carregar pasta {dir}: {ex.Message}", ex); }
+                catch (IOException ex) { LogService.LogError($"Erro de I/O ao carregar pasta {dir}: {ex.Message}", ex); }
+                catch (Exception ex) { LogService.LogError($"Erro inesperado ao carregar pasta {dir}: {ex.Message}", ex); }
             }
 
             // Carregar arquivos
@@ -465,7 +469,11 @@ namespace GerenciadorAulas
                         });
                     }
                 }
-                catch (Exception ex) { LogService.Log($"Erro ao carregar arquivo {file}: {ex.Message}"); }
+                catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar arquivo {file}: {ex.Message}", ex); }
+                catch (PathTooLongException ex) { LogService.LogError($"Caminho muito longo ao carregar arquivo {file}: {ex.Message}", ex); }
+                catch (FileNotFoundException ex) { LogService.LogError($"Arquivo não encontrado ao carregar arquivo {file}: {ex.Message}", ex); }
+                catch (IOException ex) { LogService.LogError($"Erro de I/O ao carregar arquivo {file}: {ex.Message}", ex); }
+                catch (Exception ex) { LogService.LogError($"Erro inesperado ao carregar arquivo {file}: {ex.Message}", ex); }
             }
         }
 
@@ -679,11 +687,36 @@ namespace GerenciadorAulas
                     mpvProcess?.Dispose();
                     mpvProcess = null;
                 }
+                catch (FileNotFoundException ex)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _windowManager?.ShowMessageBox($"Erro: O executável do MPV não foi encontrado em '{Configuracoes.MPVPath}'. Verifique o caminho nas Configurações. Erro: {ex.Message}");
+                        LogService.LogError($"Erro: Executável do MPV não encontrado. Caminho: {Configuracoes.MPVPath}", ex);
+                    });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _windowManager?.ShowMessageBox($"Erro ao iniciar o MPV: Operação inválida. Verifique o caminho em Configurações. Erro: {ex.Message}");
+                        LogService.LogError($"Erro ao iniciar o MPV: Operação inválida. Caminho: {Configuracoes.MPVPath}", ex);
+                    });
+                }
+                catch (System.ComponentModel.Win32Exception ex) // Specific for Process.Start errors
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _windowManager?.ShowMessageBox($"Erro do sistema ao iniciar o MPV: {ex.Message}. Verifique as permissões ou se o MPV está corrompido.");
+                        LogService.LogError($"Erro do sistema ao iniciar o MPV. Caminho: {Configuracoes.MPVPath}", ex);
+                    });
+                }
                 catch (Exception ex)
                 {
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        _windowManager?.ShowMessageBox($"Erro ao abrir o MPV: Verifique o caminho em Configurações. Erro: {ex.Message}");
+                        _windowManager?.ShowMessageBox($"Erro inesperado ao abrir o MPV: {ex.Message}. Verifique o caminho em Configurações.");
+                        LogService.LogError($"Erro inesperado ao abrir o MPV. Caminho: {Configuracoes.MPVPath}", ex);
                     });
                 }
             }

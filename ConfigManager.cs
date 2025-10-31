@@ -43,9 +43,21 @@ namespace GerenciadorAulas
                 var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(arquivoConfig, json);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogService.LogError($"Erro de permissão ao salvar configurações: {ex.Message}", ex);
+            }
+            catch (IOException ex)
+            {
+                LogService.LogError($"Erro de I/O ao salvar configurações: {ex.Message}", ex);
+            }
+            catch (JsonException ex)
+            {
+                LogService.LogError($"Erro de serialização JSON ao salvar configurações: {ex.Message}", ex);
+            }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao salvar configuracoes: {ex.Message}");
+                LogService.LogError($"Erro inesperado ao salvar configurações: {ex.Message}", ex);
             }
         }
 
@@ -59,9 +71,29 @@ namespace GerenciadorAulas
                 var json = File.ReadAllText(arquivoConfig);
                 return JsonSerializer.Deserialize<Configuracoes>(json) ?? new Configuracoes();
             }
+            catch (FileNotFoundException ex)
+            {
+                LogService.LogError($"Arquivo de configuração não encontrado: {ex.Message}", ex);
+                return new Configuracoes();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                LogService.LogError($"Erro de permissão ao carregar configurações: {ex.Message}", ex);
+                return new Configuracoes();
+            }
+            catch (IOException ex)
+            {
+                LogService.LogError($"Erro de I/O ao carregar configurações: {ex.Message}", ex);
+                return new Configuracoes();
+            }
+            catch (JsonException ex)
+            {
+                LogService.LogError($"Erro de desserialização JSON ao carregar configurações: {ex.Message}", ex);
+                return new Configuracoes();
+            }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao carregar configuracoes: {ex.Message}");
+                LogService.LogError($"Erro inesperado ao carregar configurações: {ex.Message}", ex);
                 return new Configuracoes();
             }
         }

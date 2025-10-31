@@ -31,6 +31,8 @@ O **Gerenciador de Aulas** é uma aplicação de desktop desenvolvida em **WPF (
 
 O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo em uma estrutura de árvore hierárquica (`TreeView`), marque vídeos como assistidos, e utilize um *player* de mídia externo (`mpv.exe`) para a reprodução. O estado de progresso é salvo automaticamente, permitindo que o usuário retome suas atividades a qualquer momento.
 
+- **Tratamento de Erros Robusto:** A aplicação agora inclui um sistema de tratamento de exceções global para capturar e registrar erros inesperados, melhorando a estabilidade e a experiência do usuário.
+
 ### 1.1. Tecnologias e Padrões
 
 * **Linguagem de Programação:** C#
