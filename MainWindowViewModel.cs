@@ -38,7 +38,7 @@ namespace GerenciadorAulas
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Erro ao finalizar MPV: {ex.Message}");
+                    LogService.Log($"Erro ao finalizar MPV: {ex.Message}");
                 }
                 finally
                 {
@@ -142,15 +142,13 @@ namespace GerenciadorAulas
         // DEPENDÊNCIAS
         // ----------------------------------------------------
         private readonly IWindowManager _windowManager;
+        private readonly IPersistenceService _persistenceService;
 
 
         // ----------------------------------------------------
         // CAMPOS PRIVADOS E PATHS
         // ----------------------------------------------------
-        private readonly string appDataDir;
-        private readonly string estadoArquivo;
-        private readonly string ultimoVideoArquivo;
-        private readonly string estadoTreeArquivo;
+
         private CancellationTokenSource? cts;
         private Process? mpvProcess;
 
@@ -229,21 +227,22 @@ namespace GerenciadorAulas
         // CONSTRUTORES
         // ----------------------------------------------------
 
-        public MainWindowViewModel() : this(new StubWindowManager())
+        public MainWindowViewModel() : this(new StubWindowManager(), new StubPersistenceService())
         {
             // Construtor de Design-Time
         }
 
-        public MainWindowViewModel(IWindowManager windowManager)
+        public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService)
         {
             _windowManager = windowManager;
+            _persistenceService = persistenceService;
 
-            // 1. Inicializa Paths
-            appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
-            if (!Directory.Exists(appDataDir)) Directory.CreateDirectory(appDataDir);
-            estadoArquivo = Path.Combine(appDataDir, "videos_assistidos.json");
-            ultimoVideoArquivo = Path.Combine(appDataDir, "ultimo_video.json");
-            estadoTreeArquivo = Path.Combine(appDataDir, "estadoTreeView.json");
+            // 1. Inicializa Paths (agora gerenciado pelo PersistenceService)
+            // appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
+            // if (!Directory.Exists(appDataDir)) Directory.CreateDirectory(appDataDir);
+            // estadoArquivo = Path.Combine(appDataDir, "videos_assistidos.json");
+            // ultimoVideoArquivo = Path.Combine(appDataDir, "ultimo_video.json");
+            // estadoTreeArquivo = Path.Combine(appDataDir, "estadoTreeView.json");
 
             // 2. Carrega Configurações/Estado
             _configuracoes = ConfigManager.Carregar();
@@ -276,7 +275,7 @@ namespace GerenciadorAulas
                 else if (item is FolderItem folder)
                 {
                     // Caso 2: Item selecionado é uma pasta. Tenta tocar o próximo vídeo DENTRO dela.
-                    Debug.WriteLine($"Play acionado em pasta: {folder.Name}. Buscando primeiro vídeo não assistido dentro.");
+                    LogService.Log($"Play acionado em pasta: {folder.Name}. Buscando primeiro vídeo não assistido dentro.");
 
                     // Procura o primeiro vídeo não assistido dentro da pasta (recursivamente)
                     var nextVideoInFolder = ObterVideosRecursivo(folder)
@@ -396,7 +395,7 @@ namespace GerenciadorAulas
                         });
                     }
                 }
-                catch (Exception ex) { Debug.WriteLine($"Erro ao carregar pasta {dir}: {ex.Message}"); }
+                catch (Exception ex) { LogService.Log($"Erro ao carregar pasta {dir}: {ex.Message}"); }
             }
 
             // Carregar arquivos
@@ -413,7 +412,7 @@ namespace GerenciadorAulas
                         });
                     }
                 }
-                catch (Exception ex) { Debug.WriteLine($"Erro ao carregar arquivo {file}: {ex.Message}"); }
+                catch (Exception ex) { LogService.Log($"Erro ao carregar arquivo {file}: {ex.Message}"); }
             }
         }
 
@@ -687,34 +686,22 @@ namespace GerenciadorAulas
 
         private void SalvarEstadoVideosAssistidos()
         {
-            try { File.WriteAllText(estadoArquivo, JsonConvert.SerializeObject(VideosAssistidos.ToList())); }
-            catch (Exception ex) { Debug.WriteLine($"Erro ao salvar estado de vídeos: {ex.Message}"); }
+            _persistenceService.SaveWatchedVideos(VideosAssistidos);
         }
 
         private void CarregarEstadoVideosAssistidos()
         {
-            if (!File.Exists(estadoArquivo)) return;
-
-            try
-            {
-                var lista = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(estadoArquivo));
-                if (lista != null) VideosAssistidos = new HashSet<string>(lista);
-            }
-            catch (Exception ex) { Debug.WriteLine($"Erro ao carregar estado de vídeos: {ex.Message}"); }
+            VideosAssistidos = _persistenceService.LoadWatchedVideos();
         }
 
         private void SalvarEstadoTreeView()
         {
-            try
-            {
-                var estado = new TreeViewEstado();
+            var estado = new TreeViewEstado();
 
-                foreach (var item in TreeRoot)
-                    SalvarEstadoRecursivo(item, estado);
+            foreach (var item in TreeRoot)
+                SalvarEstadoRecursivo(item, estado);
 
-                File.WriteAllText(estadoTreeArquivo, JsonConvert.SerializeObject(estado, Formatting.Indented));
-            }
-            catch (Exception ex) { Debug.WriteLine($"Erro ao salvar estado da TreeView: {ex.Message}"); }
+            _persistenceService.SaveTreeViewEstado(estado);
         }
 
         private void SalvarEstadoRecursivo(object item, TreeViewEstado estado)
@@ -736,28 +723,22 @@ namespace GerenciadorAulas
 
         private void CarregarEstadoTreeView()
         {
-            if (!File.Exists(estadoTreeArquivo)) return;
+            var estado = _persistenceService.LoadTreeViewEstado();
+            if (estado == null) return;
 
-            try
+            // Carrega as pastas raiz
+            foreach (var folderPath in estado.Pastas)
             {
-                var estado = JsonConvert.DeserializeObject<TreeViewEstado>(File.ReadAllText(estadoTreeArquivo));
-                if (estado == null) return;
-
-                // Carrega as pastas raiz
-                foreach (var folderPath in estado.Pastas)
+                if (Directory.Exists(folderPath) && !itensCarregados.Contains(folderPath))
                 {
-                    if (Directory.Exists(folderPath) && !itensCarregados.Contains(folderPath))
-                    {
-                        // Precisa rodar em Task.Run, mas aqui chamamos a versão síncrona para inicialização
-                        CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
-                    }
+                    // Precisa rodar em Task.Run, mas aqui chamamos a versão síncrona para inicialização
+                    CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
                 }
-
-                // Restaura estados (expandido, checado)
-                foreach (var item in TreeRoot)
-                    RestaurarEstadoRecursivo(item, estado);
             }
-            catch (Exception ex) { Debug.WriteLine($"Erro ao carregar estado da TreeView: {ex.Message}"); }
+
+            // Restaura estados (expandido, checado)
+            foreach (var item in TreeRoot)
+                RestaurarEstadoRecursivo(item, estado);
         }
 
         // Versão Síncrona para inicialização (usada pelo CarregarEstadoTreeView)
@@ -823,14 +804,9 @@ namespace GerenciadorAulas
 
         private void SalvarUltimoVideo(string caminho)
         {
-            try { File.WriteAllText(ultimoVideoArquivo, caminho); }
-            catch (Exception ex) { Debug.WriteLine($"Erro ao salvar último vídeo: {ex.Message}"); }
+            _persistenceService.SaveLastPlayedVideo(caminho);
         }
 
-        public class TreeViewEstado
-        {
-            public List<string> Pastas { get; set; } = new List<string>();
-            public List<string> PastasExpandidas { get; set; } = new List<string>();
-        }
+
     }
 }

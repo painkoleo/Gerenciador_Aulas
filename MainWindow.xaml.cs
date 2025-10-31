@@ -10,7 +10,7 @@ namespace GerenciadorAulas
             InitializeComponent();
 
             // CORREÇÃO: Inicializa o DataContext injetando a dependência REAL.
-            this.DataContext = new MainWindowViewModel(new WindowManager());
+            this.DataContext = new MainWindowViewModel(new WindowManager(), new PersistenceService());
         }
 
         // Manipuladores de Drag & Drop

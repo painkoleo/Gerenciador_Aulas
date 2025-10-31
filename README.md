@@ -21,6 +21,7 @@
 6. [Serviços e Injeção de Dependência](#6-serviços-e-injeção-de-dependência)
     * [6.1. LogService (`LogService.cs`)](#61-logservice-logservicecs)
     * [6.2. IWindowManager (Gerenciamento de Janelas)](#62-iwindowmanager-gerenciamento-de-janelas)
+    * [6.3. IPersistenceService (Gerenciamento de Persistência)](#63-ipersistenceservice-gerenciamento-de-persistência)
 
 ---
 
@@ -91,9 +92,9 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 | Componente | Classes Relacionadas | Responsabilidade |
 | :--- | :--- | :--- |
 | **ViewModel** | `MainWindowViewModel`, `ViewModelBase` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
-| **Model** | `VideoItem`, `FolderItem`, `Configuracoes`, `TreeViewEstado` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados persistentes (configurações, estado da árvore). |
+| **Model** | `VideoItem`, `FolderItem`, `Configuracoes` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
 | **View** | `MainWindow.xaml`, `FolderProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
-| **Services** | `IWindowManager`, `LogService`, `ConfigManager` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
+| **Services** | `IWindowManager`, `IPersistenceService`, `LogService`, `ConfigManager` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
 
 ## 4. Detalhes do ViewModel (`MainWindowViewModel.cs`)
 
@@ -132,16 +133,7 @@ A reprodução é gerida pelo método `ReproduzirVideosAsync`, que utiliza o `Sy
 
 ## 5. Gerenciamento e Persistência de Estado
 
-O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões.
-
-### 5.1. Arquivos de Persistência
-
-| Arquivo | Conteúdo | Método de Persistência |
-| :--- | :--- | :--- |
-| `videos_assistidos.json` | Uma lista simples (`string[]`) de caminhos de arquivos de vídeos assistidos. | `SalvarEstadoVideosAssistidos` |
-| `estadoTreeView.json` | Armazena a estrutura da `TreeView` e o estado de expansão das pastas. | `SalvarEstadoTreeView` |
-| `ultimo_video.json` | O caminho completo do último vídeo que foi iniciado. | `SalvarUltimoVideo` |
-| `configuracoes.json` | Armazena as configurações globais (caminho do player, fullscreen, etc.). | `ConfigManager.Salvar` |
+O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões. Toda a lógica de leitura e escrita de arquivos é centralizada no `PersistenceService`, que é injetado no `MainWindowViewModel`.
 
 ### 5.2. Rastreamento de Progresso
 
@@ -162,5 +154,13 @@ O `LogService` é uma classe estática utilizada para centralizar o registro de 
 
 O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (`ConfigWindow`, `FolderProgressWindow`) e caixas de diálogo do sistema.
 
-* A interface `IWindowManager` abstrai as chamadas de UI.
+* A interface `IWindowManager` abstrai as chamadas de UI, e a implementação `WindowManager` lida com a criação e exibição das janelas.
 * O `MainWindowViewModel` recebe uma instância de `IWindowManager` em seu construtor, o que facilita a testabilidade da aplicação.
+
+### 6.3. IPersistenceService (Gerenciamento de Persistência)
+
+Para centralizar a lógica de leitura e escrita de dados, a aplicação utiliza o `IPersistenceService`.
+
+* A interface `IPersistenceService` define um contrato para salvar e carregar o estado da aplicação (vídeos assistidos, estado da árvore, etc.).
+* A implementação `PersistenceService` lida com a serialização e desserialização de objetos para arquivos JSON, localizados na pasta `AppData` do usuário.
+* Assim como o `IWindowManager`, este serviço é injetado no `MainWindowViewModel` para manter o baixo acoplamento e a testabilidade.

@@ -18,7 +18,7 @@
 
         <local:BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
 
-        <local:AlternatingRowBrushConverter x:Key="ZebraConverter" Brush1="#1f1f1f" Brush2="#2a2a2a"/>
+        <local:AlternatingRowBrushConverter x:Key="ZebraConverter" Brush1="#252526" Brush2="#2D2D30"/>
 
         <Style TargetType="Button">
             <Setter Property="Width" Value="28"/>
@@ -40,6 +40,15 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="1">
+ <Grid.Style>
+ <Style TargetType="Grid">
+ <Style.Triggers>
+ <DataTrigger Binding="{Binding IsLoading}" Value="True">
+ <Setter Property="IsEnabled" Value="False"/>
+ </DataTrigger>
+ </Style.Triggers>
+ </Style>
+ </Grid.Style>
  <Grid.ColumnDefinitions>
     <ColumnDefinition Width="60"/>  <ColumnDefinition Width="*"/>
 </Grid.ColumnDefinitions>
@@ -83,7 +92,7 @@
                 </Button>
             </Grid>
 
-            <Border Grid.Column="1" Background="#1f1f1f" CornerRadius="10" Padding="5">
+            <Border Grid.Column="1" Background="#252526" CornerRadius="10" Padding="5">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderThickness" Value="0"/>
