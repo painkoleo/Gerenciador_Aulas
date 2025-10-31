@@ -26,6 +26,7 @@ namespace GerenciadorAulas
 
         private void BtnStop_Click()
         {
+            LogService.Log("Comando 'Parar Reprodução' acionado.");
             IsManuallyStopped = true;
 
             // Finaliza a thread MPV se estiver rodando
@@ -58,6 +59,7 @@ namespace GerenciadorAulas
 
         private async Task BtnNextVideo_Click()
         {
+            LogService.Log("Comando 'Próximo Vídeo' acionado.");
             // Obtém todos os vídeos que NÃO estão checados (não assistidos)
             var videosNaoAssistidos = TreeRoot.SelectMany(ObterVideosRecursivo)
                                              .Where(v => !v.IsChecked)
@@ -82,6 +84,7 @@ namespace GerenciadorAulas
 
         private void BtnRefresh_Click()
         {
+            LogService.Log("Comando 'Atualizar Lista' acionado.");
             // Limpa tudo
             TreeRoot.Clear();
             itensCarregados.Clear();
@@ -98,7 +101,12 @@ namespace GerenciadorAulas
 
         private void RemoverPastaSelecionada(FolderItem? selectedFolder)
         {
-            if (selectedFolder == null) return;
+            if (selectedFolder == null)
+            {
+                LogService.LogWarning("Tentativa de remover pasta selecionada, mas nenhuma pasta foi selecionada.");
+                return;
+            }
+            LogService.Log($"Comando 'Remover Pasta Selecionada' acionado para: {selectedFolder.FullPath}");
 
             // Remove do HashSet de itens carregados (recursivamente)
             RemoverDoHashSetRecursivo(selectedFolder);
@@ -234,6 +242,7 @@ namespace GerenciadorAulas
 
         public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService)
         {
+            LogService.Log("MainWindowViewModel inicializado.");
             _windowManager = windowManager;
             _persistenceService = persistenceService;
 
@@ -255,14 +264,21 @@ namespace GerenciadorAulas
             {
                 if (video != null)
                 {
+                    LogService.Log($"Comando 'Reproduzir Vídeo' acionado para: {video.FullPath}");
                     IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
                     await ReproduzirVideosAsync(new[] { video });
+                }
+                else
+                {
+                    LogService.LogWarning("Comando 'Reproduzir Vídeo' acionado, mas nenhum vídeo foi fornecido.");
                 }
             });
 
             // NOVO COMANDO PARA TRATAR SELEÇÃO DE PASTA OU VÍDEO
             PlaySelectedItemCommand = new RelayCommand<object?>(async item =>
             {
+                LogService.Log("Comando 'Reproduzir Item Selecionado' acionado.");
+
                 // CORREÇÃO: Reseta o estado de parada manual para permitir que o Play funcione
                 // mesmo após um Stop/Pause.
                 IsManuallyStopped = false;
@@ -270,6 +286,7 @@ namespace GerenciadorAulas
                 if (item is VideoItem video)
                 {
                     // Caso 1: Item selecionado é um vídeo. Toca ele.
+                    LogService.Log($"Reproduzindo vídeo selecionado: {video.FullPath}");
                     await ReproduzirVideosAsync(new[] { video });
                 }
                 else if (item is FolderItem folder)
@@ -283,12 +300,18 @@ namespace GerenciadorAulas
 
                     if (nextVideoInFolder != null)
                     {
+                        LogService.Log($"Próximo vídeo não assistido encontrado na pasta '{folder.Name}': {nextVideoInFolder.FullPath}");
                         await ReproduzirVideosAsync(new[] { nextVideoInFolder });
                     }
                     else
                     {
+                        LogService.LogWarning($"A pasta '{folder.Name}' já está completa ou não contém vídeos não assistidos.");
                         _windowManager?.ShowMessageBox($"A pasta '{folder.Name}' já está completa ou não contém vídeos não assistidos.");
                     }
+                }
+                else
+                {
+                    LogService.LogWarning("Comando 'Reproduzir Item Selecionado' acionado, mas o item é nulo ou de um tipo não suportado.");
                 }
                 // Se for null ou outro tipo, ignora
             });
@@ -301,23 +324,48 @@ namespace GerenciadorAulas
             AddFoldersCommand = new RelayCommand<string>(path =>
             {
                 if (path != null && Directory.Exists(path))
-                    CarregarPastaDropOrAdd(path);
-            });
-
-            ClearSelectedFolderCommand = new RelayCommand<object?>(item => RemoverPastaSelecionada(item as FolderItem));
-
-            OpenConfigCommand = new RelayCommand<object?>(_ => _windowManager.ShowConfigWindow(Configuracoes));
-
-            BrowseFoldersCommand = new RelayCommand<object?>(_ =>
-            {
-                string? selectedPath = _windowManager.OpenFolderDialog();
-                if (selectedPath != null)
                 {
-                    CarregarPastaDropOrAdd(selectedPath);
+                    LogService.Log($"Comando 'Adicionar Pastas' acionado com caminho: {path}");
+                    CarregarPastaDropOrAdd(path);
+                }
+                else
+                {
+                    LogService.LogWarning($"Comando 'Adicionar Pastas' acionado com caminho inválido ou nulo: {path ?? "null"}");
                 }
             });
 
-            ShowProgressCommand = new RelayCommand<object?>(_ => _windowManager.ShowFolderProgressWindow(this));
+            ClearSelectedFolderCommand = new RelayCommand<object?>(item =>
+            {
+                LogService.Log("Comando 'Limpar Pasta Selecionada' acionado.");
+                RemoverPastaSelecionada(item as FolderItem);
+            });
+
+            OpenConfigCommand = new RelayCommand<object?>(_ =>
+            {
+                LogService.Log("Comando 'Abrir Configurações' acionado.");
+                _windowManager.ShowConfigWindow(Configuracoes);
+            });
+
+            BrowseFoldersCommand = new RelayCommand<object?>(_ =>
+            {
+                LogService.Log("Comando 'Procurar Pastas' acionado.");
+                string? selectedPath = _windowManager.OpenFolderDialog();
+                if (selectedPath != null)
+                {
+                    LogService.Log($"Pasta selecionada via diálogo: {selectedPath}");
+                    CarregarPastaDropOrAdd(selectedPath);
+                }
+                else
+                {
+                    LogService.Log("Seleção de pasta cancelada pelo usuário.");
+                }
+            });
+
+            ShowProgressCommand = new RelayCommand<object?>(_ =>
+            {
+                LogService.Log("Comando 'Mostrar Progresso' acionado.");
+                _windowManager.ShowFolderProgressWindow(this);
+            });
 
             AtualizarProgresso();
         }
@@ -328,7 +376,12 @@ namespace GerenciadorAulas
 
         public void CarregarPastaDropOrAdd(string? path)
         {
-            if (string.IsNullOrEmpty(path)) return;
+            if (string.IsNullOrEmpty(path))
+            {
+                LogService.LogWarning("Tentativa de carregar pasta/vídeo com caminho vazio ou nulo.");
+                return;
+            }
+            LogService.Log($"Iniciando carregamento de pasta/vídeo: {path}");
             IsLoading = true; // Inicia o indicador de progresso
 
             Task.Run(() =>
@@ -524,9 +577,18 @@ namespace GerenciadorAulas
         // ----------------------------------------------------
         public async Task ReproduzirVideosAsync(IEnumerable<VideoItem> videos)
         {
+            var videoList = videos.ToList();
+            if (!videoList.Any())
+            {
+                LogService.LogWarning("Tentativa de reproduzir vídeos, mas a lista de vídeos está vazia.");
+                return;
+            }
+            LogService.Log($"Iniciando reprodução assíncrona de {videoList.Count} vídeo(s). Primeiro vídeo: {videoList.FirstOrDefault()?.FullPath}");
+
             // Validação do MPV antes de qualquer outra coisa
             if (!IsMpvPathValid())
             {
+                LogService.LogError("Caminho do MPV inválido. Solicitando configuração ao usuário.");
                 _windowManager?.ShowMessageBox("O caminho para o executável do MPV não foi configurado ou é inválido. Por favor, configure-o agora.");
                 _windowManager?.ShowConfigWindow(Configuracoes);
 
@@ -546,7 +608,6 @@ namespace GerenciadorAulas
             IsManuallyStopped = false;
 
             cts = new CancellationTokenSource();
-            var videoList = videos.ToList();
             bool allVideosPlayed = true;
 
             try
@@ -586,6 +647,7 @@ namespace GerenciadorAulas
             foreach (var video in videos)
             {
                 token.ThrowIfCancellationRequested();
+                LogService.Log($"Reproduzindo vídeo: {video.FullPath}");
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -686,16 +748,19 @@ namespace GerenciadorAulas
 
         private void SalvarEstadoVideosAssistidos()
         {
+            LogService.Log("Salvando estado dos vídeos assistidos.");
             _persistenceService.SaveWatchedVideos(VideosAssistidos);
         }
 
         private void CarregarEstadoVideosAssistidos()
         {
+            LogService.Log("Carregando estado dos vídeos assistidos.");
             VideosAssistidos = _persistenceService.LoadWatchedVideos();
         }
 
         private void SalvarEstadoTreeView()
         {
+            LogService.Log("Salvando estado da TreeView.");
             var estado = new TreeViewEstado();
 
             foreach (var item in TreeRoot)
@@ -723,8 +788,13 @@ namespace GerenciadorAulas
 
         private void CarregarEstadoTreeView()
         {
+            LogService.Log("Carregando estado da TreeView.");
             var estado = _persistenceService.LoadTreeViewEstado();
-            if (estado == null) return;
+            if (estado == null)
+            {
+                LogService.Log("Nenhum estado da TreeView encontrado para carregar.");
+                return;
+            }
 
             // Carrega as pastas raiz
             foreach (var folderPath in estado.Pastas)
@@ -804,6 +874,7 @@ namespace GerenciadorAulas
 
         private void SalvarUltimoVideo(string caminho)
         {
+            LogService.Log($"Salvando último vídeo reproduzido: {caminho}");
             _persistenceService.SaveLastPlayedVideo(caminho);
         }
 

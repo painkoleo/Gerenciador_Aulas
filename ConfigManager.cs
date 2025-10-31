@@ -15,6 +15,27 @@ namespace GerenciadorAulas
         {
             try
             {
+                // Carregar a configuração existente para comparar
+                Configuracoes oldConfig = Carregar();
+
+                // Logar as mudanças
+                if (config.PastaPadrao != oldConfig.PastaPadrao)
+                {
+                    LogService.Log($"Configuração alterada: PastaPadrao de '{oldConfig.PastaPadrao}' para '{config.PastaPadrao}'");
+                }
+                if (config.ReproducaoContinua != oldConfig.ReproducaoContinua)
+                {
+                    LogService.Log($"Configuração alterada: ReproducaoContinua de '{oldConfig.ReproducaoContinua}' para '{config.ReproducaoContinua}'");
+                }
+                if (config.MPVFullscreen != oldConfig.MPVFullscreen)
+                {
+                    LogService.Log($"Configuração alterada: MPVFullscreen de '{oldConfig.MPVFullscreen}' para '{config.MPVFullscreen}'");
+                }
+                if (config.MPVPath != oldConfig.MPVPath)
+                {
+                    LogService.Log($"Configuração alterada: MPVPath de '{oldConfig.MPVPath}' para '{config.MPVPath}'");
+                }
+
                 string dir = Path.GetDirectoryName(arquivoConfig)!;
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
