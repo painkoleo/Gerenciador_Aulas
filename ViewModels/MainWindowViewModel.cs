@@ -166,6 +166,7 @@ namespace GerenciadorAulas.ViewModels
         private double _progressoGeral = 0;
         private bool _isManuallyStopped = false;
         private bool _isLoading = false; // Novo: Para a barra de progresso (indeterminado)
+        private bool _isInitializing = false;
         private bool _isDragging = false; // Novo: Para o feedback visual do Drag&Drop
 
         private readonly HashSet<string> itensCarregados = new HashSet<string>();
@@ -799,6 +800,8 @@ namespace GerenciadorAulas.ViewModels
 
         private void SalvarEstadoTreeView()
         {
+            if (_isInitializing) return;
+
             LogService.Log("Salvando estado da TreeView.");
             var estado = new TreeViewEstado();
 
@@ -835,19 +838,27 @@ namespace GerenciadorAulas.ViewModels
                 return;
             }
 
-            // Carrega as pastas raiz
-            foreach (var folderPath in estado.Pastas)
+            _isInitializing = true;
+            try
             {
-                if (Directory.Exists(folderPath) && !itensCarregados.Contains(folderPath))
+                // Carrega as pastas raiz
+                foreach (var folderPath in estado.Pastas)
                 {
-                    // Precisa rodar em Task.Run, mas aqui chamamos a versão síncrona para inicialização
-                    CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
+                    if (Directory.Exists(folderPath) && !itensCarregados.Contains(folderPath))
+                    {
+                        // Precisa rodar em Task.Run, mas aqui chamamos a versão síncrona para inicialização
+                        CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
+                    }
                 }
-            }
 
-            // Restaura estados (expandido, checado)
-            foreach (var item in TreeRoot)
-                RestaurarEstadoRecursivo(item, estado);
+                // Restaura estados (expandido, checado)
+                foreach (var item in TreeRoot)
+                    RestaurarEstadoRecursivo(item, estado);
+            }
+            finally
+            {
+                _isInitializing = false;
+            }
         }
 
         // Versão Síncrona para inicialização (usada pelo CarregarEstadoTreeView)
