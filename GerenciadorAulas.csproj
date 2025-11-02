@@ -16,11 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Inclui todos os recursos automaticamente -->
     <Resource Include="Resources\**\*.*" />
-    <Content Include="Resources\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>
