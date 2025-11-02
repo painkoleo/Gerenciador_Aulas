@@ -93,10 +93,24 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 
 | Componente | Classes Relacionadas | Responsabilidade |
 | :--- | :--- | :--- |
-| **ViewModel** | `MainWindowViewModel`, `ViewModelBase` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
-| **Model** | `VideoItem`, `FolderItem`, `Configuracoes` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
-| **View** | `MainWindow.xaml`, `FolderProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
-| **Services** | `IWindowManager`, `IPersistenceService`, `LogService`, `ConfigManager` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
+| **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
+| **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
+| **View** | `Views/MainWindow.xaml`, `Views/FolderProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
+| **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/LogService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
+
+### 3.2. Estrutura de Pastas
+
+Para melhor organização e aderência ao padrão MVVM, o projeto foi reestruturado nas seguintes pastas principais:
+
+*   **`Commands/`**: Contém implementações de `ICommand`, como `RelayCommand`, para desacoplar ações da UI.
+*   **`Converters/`**: Armazena classes que implementam `IValueConverter` para transformações de dados na View.
+*   **`Helpers/`**: Inclui classes auxiliares e extensões que fornecem funcionalidades diversas.
+*   **`Models/`**: Define as classes de modelo de dados, como `VideoItem` e `FolderItem`.
+*   **`Services/`**: Contém interfaces e implementações de serviços (ex: `IPersistenceService`, `IWindowManager`, `LogService`).
+*   **`ViewModels/`**: Abriga as classes ViewModel, como `MainWindowViewModel` e `ViewModelBase`, que expõem dados e comandos para as Views.
+*   **`Views/`**: Contém os arquivos XAML e code-behind das janelas e controles de usuário da aplicação.
+
+---
 
 ## 4. Detalhes do ViewModel (`MainWindowViewModel.cs`)
 
@@ -149,7 +163,7 @@ O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicaçã
 
 O `LogService` é uma classe estática utilizada para centralizar o registro de eventos e erros do sistema.
 
-* **Função:** Escreve mensagens com *timestamp* no arquivo `log.txt`, localizado na mesma pasta do executável.
+* **Função:** Escreve mensagens com *timestamp* em arquivos `Log_YYYYMMDD_HHMMSS.txt`, localizados na pasta `logs` na raiz do projeto.
 * **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
 
 ### 6.2. IWindowManager (Gerenciamento de Janelas)
