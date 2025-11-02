@@ -1,6 +1,7 @@
 using System.Windows;
+using GerenciadorAulas.ViewModels;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Views
 {
     public partial class FolderProgressWindow : Window
     {

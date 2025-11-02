@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Models
 {
     public class FolderProgressItem : INotifyPropertyChanged
     {

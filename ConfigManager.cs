@@ -69,7 +69,14 @@ namespace GerenciadorAulas
                     return new Configuracoes();
 
                 var json = File.ReadAllText(arquivoConfig);
-                return JsonSerializer.Deserialize<Configuracoes>(json) ?? new Configuracoes();
+                var config = JsonSerializer.Deserialize<Configuracoes>(json) ?? new Configuracoes();
+
+                if (config.VideoExtensions == null || !config.VideoExtensions.Any())
+                {
+                    config.VideoExtensions = new List<string> { ".mp4", ".mkv", ".avi", ".mov" };
+                }
+
+                return config;
             }
             catch (FileNotFoundException ex)
             {

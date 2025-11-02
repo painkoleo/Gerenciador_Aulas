@@ -1,4 +1,4 @@
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Models
 {
     public interface IHaveFullPath
     {

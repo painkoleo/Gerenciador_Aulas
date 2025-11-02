@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Helpers
 {
     // Esta classe estática adiciona a funcionalidade de TwoWay Binding ao SelectedItem do TreeView.
     public static class TreeViewExtensions

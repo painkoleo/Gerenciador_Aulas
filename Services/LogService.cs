@@ -2,10 +2,14 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Diagnostics;
-using System.Windows; // Adicionado para MessageBox
 
 namespace GerenciadorAulas.Services
 {
+    public class LogServiceInitializationException : Exception
+    {
+        public LogServiceInitializationException(string message, Exception innerException) : base(message, innerException) { }
+    }
+
     // Classe estática para log centralizado
     public static class LogService
     {
@@ -50,9 +54,7 @@ namespace GerenciadorAulas.Services
                     Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
                     "log_fallback.txt");
 
-                // Adicionar um MessageBox para informar o usuário sobre a falha crítica de log
-                MessageBox.Show($"Erro crítico ao inicializar o serviço de log: {ex.Message}. O log será direcionado para o console de depuração. Por favor, verifique as permissões de escrita.",
-                                "Erro de Inicialização de Log", MessageBoxButton.OK, MessageBoxImage.Error);
+                throw new LogServiceInitializationException($"Erro crítico ao inicializar o serviço de log: {ex.Message}. O log será direcionado para o console de depuração. Por favor, verifique as permissões de escrita.", ex);
             }
         }
 

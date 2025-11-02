@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Models
 {
     // Nota: Esta classe implementa INotifyPropertyChanged diretamente para permitir que objetos
     // File/Folder sejam marcados de forma segura, mesmo se a atualização vier de um thread em segundo plano.
@@ -76,7 +76,7 @@ namespace GerenciadorAulas
         {
             if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
                 });

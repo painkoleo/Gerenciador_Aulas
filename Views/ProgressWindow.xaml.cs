@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using GerenciadorAulas.Models;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Views
 {
     public partial class ProgressWindow : Window, INotifyPropertyChanged
     {

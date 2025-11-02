@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Controls.Primitives;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Helpers
 {
     // Classe auxiliar para manipular propriedades internas do TreeViewItem
     public static class TreeViewItemHelper

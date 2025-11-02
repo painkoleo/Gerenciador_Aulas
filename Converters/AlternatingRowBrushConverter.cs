@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Converters
 {
     public class AlternatingRowBrushConverter : IValueConverter
     {

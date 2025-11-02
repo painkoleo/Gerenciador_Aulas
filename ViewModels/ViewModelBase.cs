@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.ViewModels
 {
     public class ViewModelBase : INotifyPropertyChanged
     {

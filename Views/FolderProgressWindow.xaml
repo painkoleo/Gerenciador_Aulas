@@ -1,7 +1,7 @@
-<Window x:Class="GerenciadorAulas.FolderProgressWindow"
+<Window x:Class="GerenciadorAulas.Views.FolderProgressWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:GerenciadorAulas"
+        xmlns:models="clr-namespace:GerenciadorAulas.Models"
         Title="Progresso das Pastas"
         Height="400" Width="400"
         Background="#1e1e1e" Foreground="White"
@@ -20,7 +20,7 @@
                   Background="#1f1f1f" BorderThickness="0"
                   Foreground="White" Margin="0,0,0,10">
             <ListView.ItemTemplate>
-                <DataTemplate DataType="{x:Type local:FolderProgressItem}">
+                <DataTemplate DataType="{x:Type models:FolderProgressItem}">
                     <Grid Margin="5">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

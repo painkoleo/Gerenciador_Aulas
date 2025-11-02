@@ -1,4 +1,5 @@
 using GerenciadorAulas;
+using GerenciadorAulas.ViewModels;
 
 namespace GerenciadorAulas.Services
 {

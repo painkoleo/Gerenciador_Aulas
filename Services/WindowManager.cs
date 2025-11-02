@@ -1,5 +1,7 @@
 using System.Windows;
 using GerenciadorAulas;
+using GerenciadorAulas.ViewModels;
+using GerenciadorAulas.Views;
 using Ookii.Dialogs.Wpf;
 
 namespace GerenciadorAulas.Services

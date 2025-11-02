@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Models
 {
     public class VideoItem : INotifyPropertyChanged, IHaveFullPath
     {
@@ -31,7 +31,7 @@ namespace GerenciadorAulas
             // Garante que a notificação aconteça no thread da UI
             if (Application.Current != null && !Application.Current.Dispatcher.CheckAccess())
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
                 });

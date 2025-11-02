@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace GerenciadorAulas.Services
 {
@@ -12,6 +12,7 @@ namespace GerenciadorAulas.Services
         private readonly string estadoArquivo;
         private readonly string ultimoVideoArquivo;
         private readonly string estadoTreeArquivo;
+        private readonly JsonSerializerOptions jsonOptions;
 
         public PersistenceService()
         {
@@ -20,6 +21,7 @@ namespace GerenciadorAulas.Services
             estadoArquivo = Path.Combine(appDataDir, "videos_assistidos.json");
             ultimoVideoArquivo = Path.Combine(appDataDir, "ultimo_video.json");
             estadoTreeArquivo = Path.Combine(appDataDir, "estadoTreeView.json");
+            jsonOptions = new JsonSerializerOptions { WriteIndented = true };
         }
 
         public HashSet<string> LoadWatchedVideos()
@@ -28,12 +30,13 @@ namespace GerenciadorAulas.Services
 
             try
             {
-                var lista = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(estadoArquivo));
+                var json = File.ReadAllText(estadoArquivo);
+                var lista = JsonSerializer.Deserialize<List<string>>(json);
                 return lista != null ? new HashSet<string>(lista) : new HashSet<string>();
             }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao carregar estado de vídeos assistidos: {ex.Message}");
+                LogService.LogError($"Erro ao carregar estado de vídeos assistidos: {ex.Message}", ex);
                 return new HashSet<string>();
             }
         }
@@ -42,11 +45,12 @@ namespace GerenciadorAulas.Services
         {
             try
             {
-                File.WriteAllText(estadoArquivo, JsonConvert.SerializeObject(watchedVideos.ToList()));
+                var json = JsonSerializer.Serialize(watchedVideos.ToList(), jsonOptions);
+                File.WriteAllText(estadoArquivo, json);
             }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao salvar estado de vídeos assistidos: {ex.Message}");
+                LogService.LogError($"Erro ao salvar estado de vídeos assistidos: {ex.Message}", ex);
             }
         }
 
@@ -56,12 +60,13 @@ namespace GerenciadorAulas.Services
 
             try
             {
-                var estado = JsonConvert.DeserializeObject<TreeViewEstado>(File.ReadAllText(estadoTreeArquivo));
+                var json = File.ReadAllText(estadoTreeArquivo);
+                var estado = JsonSerializer.Deserialize<TreeViewEstado>(json);
                 return estado ?? new TreeViewEstado();
             }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao carregar estado da TreeView: {ex.Message}");
+                LogService.LogError($"Erro ao carregar estado da TreeView: {ex.Message}", ex);
                 return new TreeViewEstado();
             }
         }
@@ -70,11 +75,12 @@ namespace GerenciadorAulas.Services
         {
             try
             {
-                File.WriteAllText(estadoTreeArquivo, JsonConvert.SerializeObject(treeViewEstado, Formatting.Indented));
+                var json = JsonSerializer.Serialize(treeViewEstado, jsonOptions);
+                File.WriteAllText(estadoTreeArquivo, json);
             }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao salvar estado da TreeView: {ex.Message}");
+                LogService.LogError($"Erro ao salvar estado da TreeView: {ex.Message}", ex);
             }
         }
 
@@ -86,7 +92,7 @@ namespace GerenciadorAulas.Services
             }
             catch (Exception ex)
             {
-                LogService.Log($"Erro ao salvar último vídeo reproduzido: {ex.Message}");
+                LogService.LogError($"Erro ao salvar último vídeo reproduzido: {ex.Message}", ex);
             }
         }
     }

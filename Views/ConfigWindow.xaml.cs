@@ -1,7 +1,8 @@
 using System.Windows;
 using Ookii.Dialogs.Wpf;
+using GerenciadorAulas;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Views
 {
     public partial class ConfigWindow : Window
     {

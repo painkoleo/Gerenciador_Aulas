@@ -8,10 +8,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using Newtonsoft.Json;
+using GerenciadorAulas.Commands;
+using GerenciadorAulas.Models;
 using GerenciadorAulas.Services; // Dependência!
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.ViewModels
 {
 
     // ----------------------------------------------------
@@ -374,7 +375,7 @@ namespace GerenciadorAulas
         // 🔹 Carregamento e Drag & Drop
         // ----------------------------------------------------
 
-        public void CarregarPastaDropOrAdd(string? path)
+        public async void CarregarPastaDropOrAdd(string? path)
         {
             if (string.IsNullOrEmpty(path))
             {
@@ -384,41 +385,55 @@ namespace GerenciadorAulas
             LogService.Log($"Iniciando carregamento de pasta/vídeo: {path}");
             IsLoading = true; // Inicia o indicador de progresso
 
-            Task.Run(() =>
+            var itemsToAdd = await Task.Run(() =>
             {
+                var newItems = new List<object>();
                 if (Directory.Exists(path))
-                    CarregarPastaRecursivaSeNaoExistir(path, TreeRoot);
-                else if (File.Exists(path) && EhVideo(path))
-                    AdicionarVideoRecursivoSeNaoExistir(path, TreeRoot);
-
-                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    SalvarEstadoTreeView();
-                    AtualizarProgresso();
-                    OnPropertyChanged(nameof(TotalFolders));
-                    OnPropertyChanged(nameof(TotalVideos));
-                    IsLoading = false; // Finaliza o indicador
-                });
+                    var newItem = CarregarPastaRecursivaSeNaoExistir(path, TreeRoot);
+                    if (newItem != null)
+                    {
+                        newItems.Add(newItem);
+                    }
+                }
+                else if (File.Exists(path) && EhVideo(path))
+                {
+                    var newItem = AdicionarVideoRecursivoSeNaoExistir(path, TreeRoot);
+                    if (newItem != null)
+                    {
+                        newItems.Add(newItem);
+                    }
+                }
+                return newItems;
             });
+
+            foreach (var item in itemsToAdd)
+            {
+                TreeRoot.Add(item);
+            }
+
+            SalvarEstadoTreeView();
+            AtualizarProgresso();
+            OnPropertyChanged(nameof(TotalFolders));
+            OnPropertyChanged(nameof(TotalVideos));
+            IsLoading = false; // Finaliza o indicador
         }
 
-        private void CarregarPastaRecursivaSeNaoExistir(string path, ObservableCollection<object> parent)
+        private FolderItem? CarregarPastaRecursivaSeNaoExistir(string path, ObservableCollection<object> parent)
         {
-            if (itensCarregados.Contains(path)) return;
+            if (itensCarregados.Contains(path)) return null;
 
             var folder = CriarFolderItem(path, null);
             CarregarPasta(path, folder.Children, folder);
 
             if (ObterVideosRecursivo(folder).Any() || folder.Children.OfType<FolderItem>().Any())
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    parent.Add(folder);
-                    itensCarregados.Add(path);
-                    AtualizarCheckboxFolder(folder);
-                    AtualizarNomeComProgresso(folder);
-                });
+                itensCarregados.Add(path);
+                AtualizarCheckboxFolder(folder);
+                AtualizarNomeComProgresso(folder);
+                return folder;
             }
+            return null;
         }
 
         // ... (outros métodos de carregamento de pastas e vídeos) ...
@@ -439,13 +454,10 @@ namespace GerenciadorAulas
 
                     if (ObterVideosRecursivo(folder).Any() || folder.Children.OfType<FolderItem>().Any())
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            parent.Add(folder);
-                            itensCarregados.Add(dir);
-                            AtualizarCheckboxFolder(folder);
-                            AtualizarNomeComProgresso(folder);
-                        });
+                        parent.Add(folder);
+                        itensCarregados.Add(dir);
+                        AtualizarCheckboxFolder(folder);
+                        AtualizarNomeComProgresso(folder);
                     }
                 }
                 catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar pasta {dir}: {ex.Message}", ex); }
@@ -462,11 +474,8 @@ namespace GerenciadorAulas
                 {
                     if (!itensCarregados.Contains(file))
                     {
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            parent.Add(CriarVideoItem(file, parentFolder));
-                            itensCarregados.Add(file);
-                        });
+                        parent.Add(CriarVideoItem(file, parentFolder));
+                        itensCarregados.Add(file);
                     }
                 }
                 catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar arquivo {file}: {ex.Message}", ex); }
@@ -477,16 +486,13 @@ namespace GerenciadorAulas
             }
         }
 
-        private void AdicionarVideoRecursivoSeNaoExistir(string path, ObservableCollection<object> parent)
+        private VideoItem? AdicionarVideoRecursivoSeNaoExistir(string path, ObservableCollection<object> parent)
         {
-            if (!itensCarregados.Contains(path))
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    parent.Add(CriarVideoItem(path, null));
-                    itensCarregados.Add(path);
-                });
-            }
+            if (itensCarregados.Contains(path)) return null;
+
+            var video = CriarVideoItem(path, null);
+            itensCarregados.Add(path);
+            return video;
         }
 
         private FolderItem CriarFolderItem(string dir, FolderItem? parentFolder)
@@ -551,7 +557,7 @@ namespace GerenciadorAulas
 
         public void AtualizarProgresso()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 int totalGeral = 0, marcadosGeral = 0;
 
@@ -893,8 +899,7 @@ namespace GerenciadorAulas
                         yield return vid;
         }
 
-        private bool EhVideo(string path) => new[] { ".mp4", ".mkv", ".avi", ".mov" }
-                                                     .Contains(Path.GetExtension(path)?.ToLower());
+        private bool EhVideo(string path) => Configuracoes.VideoExtensions.Contains(Path.GetExtension(path)?.ToLowerInvariant());
 
         private IEnumerable<string> OrdenarNumericamente(IEnumerable<string> paths)
         {

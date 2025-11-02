@@ -1,30 +1,66 @@
 ﻿using System.Windows;
 using System;
 using System.IO;
-using GerenciadorAulas.Services; // Assuming LogService is in this namespace
+using GerenciadorAulas.Services;
+using GerenciadorAulas.ViewModels;
+using GerenciadorAulas.Views;
 using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GerenciadorAulas
 {
     public partial class App : Application
     {
+        public static IServiceProvider ServiceProvider { get; private set; }
+
+        public App()
+        {
+            var serviceCollection = new ServiceCollection();
+            ConfigureServices(serviceCollection);
+            ServiceProvider = serviceCollection.BuildServiceProvider();
+        }
+
+        private void ConfigureServices(IServiceCollection services)
+        {
+            // Register services
+            services.AddSingleton<IWindowManager, WindowManager>();
+            services.AddSingleton<IPersistenceService, PersistenceService>();
+
+            // Register ViewModels
+            services.AddTransient<MainWindowViewModel>();
+
+            // Register Windows
+            services.AddTransient<MainWindow>();
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Define o diretório para os logs na pasta de dados do aplicativo do usuário
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string logDirectory = Path.Combine(appDataPath, "GerenciadorAulas", "Logs");
+            try
+            {
+                // Define o diretório para os logs na pasta de dados do aplicativo do usuário
+                string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                string logDirectory = Path.Combine(appDataPath, "GerenciadorAulas", "Logs");
 
-            // Inicializa o serviço de log
-            LogService.Initialize(logDirectory);
-            LogService.Log("Aplicação iniciada.");
+                // Inicializa o serviço de log
+                LogService.Initialize(logDirectory);
+                LogService.Log("Aplicação iniciada.");
+            }
+            catch (LogServiceInitializationException ex)
+            {
+                MessageBox.Show(ex.Message, "Erro de Inicialização de Log", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Application.Current.Shutdown(); // Descomente para fechar o aplicativo em caso de falha no log
+            }
 
             // Configura o tratador de exceções para a UI thread
             this.DispatcherUnhandledException += App_DispatcherUnhandledException;
 
             // Configura o tratador de exceções para todas as outras threads
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            mainWindow.Show();
         }
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -1,16 +1,14 @@
 ﻿using System.Windows;
-using GerenciadorAulas.Services; // Para o IWindowManager
+using GerenciadorAulas.ViewModels;
 
-namespace GerenciadorAulas
+namespace GerenciadorAulas.Views
 {
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(MainWindowViewModel viewModel)
         {
             InitializeComponent();
-
-            // CORREÇÃO: Inicializa o DataContext injetando a dependência REAL.
-            this.DataContext = new MainWindowViewModel(new WindowManager(), new PersistenceService());
+            DataContext = viewModel;
         }
 
         // Manipuladores de Drag & Drop
@@ -19,7 +17,7 @@ namespace GerenciadorAulas
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                if (files.Length > 0 && this.DataContext is MainWindowViewModel viewModel)
+                if (files.Length > 0 && DataContext is MainWindowViewModel viewModel)
                 {
                     // Usa a função pública do ViewModel para lidar com o drop
                     viewModel.CarregarPastaDropOrAdd(files[0]);
@@ -34,7 +32,7 @@ namespace GerenciadorAulas
             e.Effects = isFile ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
 
-            if (this.DataContext is MainWindowViewModel viewModel)
+            if (DataContext is MainWindowViewModel viewModel)
             {
                 viewModel.IsDragging = isFile;
             }
@@ -42,7 +40,7 @@ namespace GerenciadorAulas
 
         private void Window_DragLeave(object sender, DragEventArgs e)
         {
-            if (this.DataContext is MainWindowViewModel viewModel)
+            if (DataContext is MainWindowViewModel viewModel)
             {
                 viewModel.IsDragging = false;
             }
