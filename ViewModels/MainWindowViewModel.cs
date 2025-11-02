@@ -899,7 +899,7 @@ namespace GerenciadorAulas.ViewModels
                         yield return vid;
         }
 
-        private bool EhVideo(string path) => Configuracoes.VideoExtensions.Contains(Path.GetExtension(path)?.ToLowerInvariant());
+        private bool EhVideo(string path) => Configuracoes.VideoExtensions.Contains((Path.GetExtension(path) ?? string.Empty).ToLowerInvariant());
 
         private IEnumerable<string> OrdenarNumericamente(IEnumerable<string> paths)
         {

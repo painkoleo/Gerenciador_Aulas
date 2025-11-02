@@ -11,13 +11,13 @@ namespace GerenciadorAulas
 {
     public partial class App : Application
     {
-        public static IServiceProvider ServiceProvider { get; private set; }
+        public static IServiceProvider? ServiceProvider { get; private set; }
 
         public App()
         {
             var serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
-            ServiceProvider = serviceCollection.BuildServiceProvider();
+            ServiceProvider = serviceCollection.BuildServiceProvider()!;
         }
 
         private void ConfigureServices(IServiceCollection services)
@@ -59,7 +59,7 @@ namespace GerenciadorAulas
             // Configura o tratador de exceções para todas as outras threads
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            var mainWindow = ServiceProvider!.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
 
