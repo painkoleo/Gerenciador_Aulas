@@ -39,9 +39,8 @@ namespace GerenciadorAulas
 
             try
             {
-                // Define o diretório para os logs na pasta de dados do aplicativo do usuário
-                string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                string logDirectory = Path.Combine(appDataPath, "GerenciadorAulas", "Logs");
+                // Define o diretório para os logs na pasta local do projeto
+                string logDirectory = "logs";
 
                 // Inicializa o serviço de log
                 LogService.Initialize(logDirectory);
