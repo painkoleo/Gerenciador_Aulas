@@ -13,11 +13,21 @@ namespace GerenciadorAulas.Services
     // Classe estática para log centralizado
     public static class LogService
     {
+        private static class Constants
+        {
+            public const string FallbackLogDirectoryName = "Logs_Fallback";
+            public const string FallbackLogFileName = "log_fallback.txt";
+            public const string InfoLevel = "INFO";
+            public const string WarningLevel = "WARNING";
+            public const string ErrorLevel = "ERROR";
+            public const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+        }
+
         // O caminho inicial é um fallback (por exemplo, na pasta do executável) caso o Initialize falhe ou não seja chamado.
         private static string _logDirectory = Path.Combine(
             Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
-            "Logs_Fallback");
-        private static string _currentLogFilePath = Path.Combine(_logDirectory, "log_fallback.txt");
+            Constants.FallbackLogDirectoryName);
+        private static string _currentLogFilePath = Path.Combine(_logDirectory, Constants.FallbackLogFileName);
         private static bool isInitialized = false;
 
         /// <summary>
@@ -52,7 +62,7 @@ namespace GerenciadorAulas.Services
                 // Fallback to a temporary log file if initialization fails
                 _currentLogFilePath = Path.Combine(
                     Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppDomain.CurrentDomain.BaseDirectory,
-                    "log_fallback.txt");
+                    Constants.FallbackLogFileName);
 
                 throw new LogServiceInitializationException($"Erro crítico ao inicializar o serviço de log: {ex.Message}. O log será direcionado para o console de depuração. Por favor, verifique as permissões de escrita.", ex);
             }
@@ -61,12 +71,12 @@ namespace GerenciadorAulas.Services
         // Grava a mensagem com data e hora
         public static void Log(string message)
         {
-            LogInternal("INFO", message);
+            LogInternal(Constants.InfoLevel, message);
         }
 
         public static void LogWarning(string message)
         {
-            LogInternal("WARNING", message);
+            LogInternal(Constants.WarningLevel, message);
         }
 
         public static void LogError(string message, Exception? ex = (Exception?)null)
@@ -76,12 +86,12 @@ namespace GerenciadorAulas.Services
             {
                 errorMessage += $" Exception: {ex.Message} StackTrace: {ex.StackTrace}";
             }
-            LogInternal("ERROR", errorMessage);
+            LogInternal(Constants.ErrorLevel, errorMessage);
         }
 
         private static void LogInternal(string level, string message)
         {
-            var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}{Environment.NewLine}";
+            var logMessage = $"[{DateTime.Now.ToString(Constants.DateTimeFormat)}] [{level}] {message}{Environment.NewLine}";
 
             try
             {
@@ -94,7 +104,7 @@ namespace GerenciadorAulas.Services
             catch (Exception ex)
             {
                 // Se o log falhar (por exemplo, permissão), registra no console de Debug
-                System.Diagnostics.Debug.WriteLine($"ERRO NO LOG: {ex.Message} - Mensagem original: {message}");
+                System.Diagnostics.Debug.WriteLine("ERRO NO LOG: " + ex.Message + " - Mensagem original: " + message);
             }
         }
     }

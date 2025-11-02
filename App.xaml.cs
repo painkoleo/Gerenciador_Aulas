@@ -25,6 +25,18 @@ namespace GerenciadorAulas
             // Register services
             services.AddSingleton<IWindowManager, WindowManager>();
             services.AddSingleton<IPersistenceService, PersistenceService>();
+            services.AddSingleton<IMediaPlayerService>(provider =>
+                MpvPlayerService.GetInstance(
+                    provider.GetRequiredService<IWindowManager>(),
+                    provider.GetRequiredService<IPersistenceService>(),
+                    () => ConfigManager.Carregar() // Usar ConfigManager.Carregar() para obter Configuracoes
+                ));
+            services.AddSingleton<ITreeViewDataService>(provider =>
+                new TreeViewDataService(
+                    provider.GetRequiredService<IWindowManager>(),
+                    provider.GetRequiredService<IPersistenceService>(),
+                    () => ConfigManager.Carregar() // Fornece a implementação para Func<Configuracoes>
+                ));
 
             // Register ViewModels
             services.AddTransient<MainWindowViewModel>();

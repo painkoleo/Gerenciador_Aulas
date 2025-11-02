@@ -38,8 +38,10 @@ O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo
 * **Linguagem de Programação:** C#
 * **Framework:** WPF (.NET)
 * **Padrão de Design:** MVVM (Model-View-ViewModel)
+* **Injeção de Dependência:** Utilização extensiva para desacoplamento e testabilidade.
 * **Persistência de Dados:** Serialização JSON (Newtonsoft.Json)
-* **Mídia:** Reprodução via processo externo (`mpv.exe`)
+* **Mídia:** Reprodução via serviço abstrato (`IMediaPlayerService`), com implementação padrão usando processo externo (`mpv.exe`).
+* **Comandos Assíncronos:** Implementação de `AsyncRelayCommand` para operações não bloqueantes na UI.
 
 ---
 
@@ -96,17 +98,17 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 | **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
 | **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
 | **View** | `Views/MainWindow.xaml`, `Views/FolderProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
-| **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/LogService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
+| **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/IMediaPlayerService.cs`, `Services/ITreeViewDataService.cs`, `Services/LogService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
 
 ### 3.2. Estrutura de Pastas
 
 Para melhor organização e aderência ao padrão MVVM, o projeto foi reestruturado nas seguintes pastas principais:
 
-*   **`Commands/`**: Contém implementações de `ICommand`, como `RelayCommand`, para desacoplar ações da UI.
+*   **`Commands/`**: Contém implementações de `ICommand`, como `RelayCommand` e `AsyncRelayCommand`, para desacoplar ações da UI.
 *   **`Converters/`**: Armazena classes que implementam `IValueConverter` para transformações de dados na View.
 *   **`Helpers/`**: Inclui classes auxiliares e extensões que fornecem funcionalidades diversas.
 *   **`Models/`**: Define as classes de modelo de dados, como `VideoItem` e `FolderItem`.
-*   **`Services/`**: Contém interfaces e implementações de serviços (ex: `IPersistenceService`, `IWindowManager`, `LogService`).
+*   **`Services/`**: Contém interfaces e implementações de serviços (ex: `IPersistenceService`, `IWindowManager`, `IMediaPlayerService`, `ITreeViewDataService`, `LogService`, `MpvPlayerService`, `TreeViewDataService`, e suas versões `Stub`).
 *   **`ViewModels/`**: Abriga as classes ViewModel, como `MainWindowViewModel` e `ViewModelBase`, que expõem dados e comandos para as Views.
 *   **`Views/`**: Contém os arquivos XAML e code-behind das janelas e controles de usuário da aplicação.
 
@@ -122,7 +124,7 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 
 | Propriedade | Tipo | Uso |
 | :--- | :--- | :--- |
-| `TreeRoot` | `ObservableCollection<object>` | A fonte de dados principal para a `TreeView`. |
+| `TreeRoot` | `ObservableCollection<object>` | A fonte de dados principal para a `TreeView`, gerenciada pelo `ITreeViewDataService`. |
 | `Configuracoes` | `Configuracoes` | Opções do aplicativo (ex: caminho do MPV, tela cheia, reprodução contínua). |
 | `VideoAtual` | `string` | Exibe o nome do vídeo que está em reprodução. |
 | `IsManuallyStopped` | `bool` | Flag para indicar se a reprodução foi interrompida pelo usuário. |
@@ -132,51 +134,110 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 
 | Comando | Função |
 | :--- | :--- |
-| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o primeiro vídeo não assistido na pasta. |
-| `StopPlaybackCommand` | Finaliza o processo `mpv.exe` e reseta o estado de reprodução. |
-| `AddFoldersCommand` | Lida com a adição de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
-| `RefreshListCommand` | Recarrega a estrutura da `TreeView` e restaura o estado de progresso salvo no disco. |
-| `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo. |
+| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o primeiro vídeo não assistido dentro dela. Este comando é assíncrono. |
+| `StopPlaybackCommand` | Finaliza o processo `mpv.exe` (via `IMediaPlayerService`) e reseta o estado de reprodução. |
+| `AddFoldersCommand` | Lida com a adição assíncrona de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
+| `RefreshListCommand` | Recarrega a estrutura da `TreeView` (via `ITreeViewDataService`) e restaura o estado de progresso salvo no disco. |
+| `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo (via `ITreeViewDataService`). |
+| `BrowseFoldersCommand` | Abre um diálogo para selecionar pastas e as adiciona assincronamente. |
 
-### 4.3. Mecanismo de Reprodução de Mídia
+### 4.3. Mecanismo de Reprodução de Mídia (via `IMediaPlayerService`)
 
-A reprodução é gerida pelo método `ReproduzirVideosAsync`, que utiliza o `System.Diagnostics.Process` para interagir com o `mpv.exe`.
+A reprodução de mídia agora é abstraída através da interface `IMediaPlayerService`, que é injetada no `MainWindowViewModel`. A implementação padrão, `MpvPlayerService`, utiliza o `mpv.exe` como processo externo.
 
-1.  **Assincronicidade:** A reprodução é encapsulada em um `Task.Run` para garantir que o **Thread de UI** não seja bloqueado.
-2.  **Controle de Fluxo:** Utiliza um `CancellationTokenSource` (`cts`) para permitir que o usuário interrompa o loop de reprodução contínua.
-3.  **Processo MPV:** O método `PlayVideosLista` inicia o `mpv.exe` com o caminho do vídeo e argumentos de configuração (ex: `--fullscreen`). A aplicação espera a saída do processo (`mpvProcess.WaitForExit()`).
-4.  **Reprodução Contínua:** Se a configuração estiver ativa, o sistema verifica a lista de vídeos para iniciar o próximo item após o término do vídeo atual.
+1.  **Abstração:** O ViewModel interage apenas com a interface `IMediaPlayerService`, sem conhecimento dos detalhes de implementação do player.
+2.  **Assincronicidade:** Os métodos de reprodução são assíncronos, garantindo que a UI permaneça responsiva.
+3.  **Controle de Fluxo:** O serviço gerencia o ciclo de vida do player externo, incluindo inicialização, reprodução, parada e tratamento de erros.
+4.  **Reprodução Contínua:** A lógica de reprodução contínua é orquestrada pelo ViewModel, que solicita ao `IMediaPlayerService` para reproduzir o próximo vídeo após a conclusão do atual, se a configuração `ReproducaoContinua` estiver ativa.
 
 ## 5. Gerenciamento e Persistência de Estado
 
-O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões. Toda a lógica de leitura e escrita de arquivos é centralizada no `PersistenceService`, que é injetado no `MainWindowViewModel`.
+O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões. Toda a lógica de leitura e escrita de arquivos é centralizada no `IPersistenceService`, que é utilizado pelo `ITreeViewDataService` para gerenciar o estado da `TreeView` e os vídeos assistidos.
 
-### 5.2. Rastreamento de Progresso
+### 5.1. Arquivos de Persistência
 
-* **Atualização em Cascata (`AtualizarPais`):** Quando a propriedade `IsChecked` de um `VideoItem` muda, a alteração é propagada recursivamente para seus pais (`FolderItem`).
-* **Progresso de Pasta:** Cada `FolderItem` calcula dinamicamente seu progresso (ex: "Nome da Pasta (10/12)") com base no número de vídeos assistidos em seus filhos.
-* **Estado Misto:** Um `FolderItem` utiliza o estado de *checkbox* **indeterminado** (ou `null`) quando alguns, mas não todos, os vídeos em sua hierarquia estão marcados.
+(Esta subseção não sofreu alterações significativas na sua descrição, mas a responsabilidade de uso foi movida para `ITreeViewDataService`.)
+
+### 5.2. Rastreamento de Progresso (via `ITreeViewDataService`)
+
+A lógica de rastreamento de progresso, que antes estava diretamente no `MainWindowViewModel`, agora é gerenciada pelo `ITreeViewDataService`.
+
+*   **Atualização em Cascata:** Quando a propriedade `IsChecked` de um `VideoItem` muda, o `ITreeViewDataService` propaga a alteração recursivamente para seus pais (`FolderItem`).
+*   **Progresso de Pasta:** Cada `FolderItem` calcula dinamicamente seu progresso (ex: "Nome da Pasta (10/12)") com base no número de vídeos assistidos em seus filhos, com a ajuda do `ITreeViewDataService`.
+*   **Estado Misto:** Um `FolderItem` utiliza o estado de *checkbox* **indeterminado** (ou `null`) quando alguns, mas não todos, os vídeos em sua hierarquia estão marcados, também gerenciado pelo `ITreeViewDataService`.
 
 ## 6. Serviços e Injeção de Dependência
 
 ### 6.1. LogService (`LogService.cs`)
 
+
+
 O `LogService` é uma classe estática utilizada para centralizar o registro de eventos e erros do sistema.
 
-* **Função:** Escreve mensagens com *timestamp* em arquivos `Log_YYYYMMDD_HHMMSS.txt`, localizados na pasta `logs` na raiz do projeto.
-* **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
+
+
+*   **Função:** Escreve mensagens com *timestamp* em arquivos `Log_YYYYMMDD_HHMMSS.txt`, localizados na pasta `logs` na raiz do projeto.
+
+*   **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
+
+
 
 ### 6.2. IWindowManager (Gerenciamento de Janelas)
 
+
+
 O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (`ConfigWindow`, `FolderProgressWindow`) e caixas de diálogo do sistema.
 
-* A interface `IWindowManager` abstrai as chamadas de UI, e a implementação `WindowManager` lida com a criação e exibição das janelas.
-* O `MainWindowViewModel` recebe uma instância de `IWindowManager` em seu construtor, o que facilita a testabilidade da aplicação.
+
+
+*   A interface `IWindowManager` abstrai as chamadas de UI, e a implementação `WindowManager` lida com a criação e exibição das janelas.
+
+*   O `MainWindowViewModel` recebe uma instância de `IWindowManager` em seu construtor, o que facilita a testabilidade da aplicação.
+
+
 
 ### 6.3. IPersistenceService (Gerenciamento de Persistência)
 
+
+
 Para centralizar a lógica de leitura e escrita de dados, a aplicação utiliza o `IPersistenceService`.
 
-* A interface `IPersistenceService` define um contrato para salvar e carregar o estado da aplicação (vídeos assistidos, estado da árvore, etc.).
-* A implementação `PersistenceService` lida com a serialização e desserialização de objetos para arquivos JSON, localizados na pasta `AppData` do usuário.
-* Assim como o `IWindowManager`, este serviço é injetado no `MainWindowViewModel` para manter o baixo acoplamento e a testabilidade.
+
+
+*   A interface `IPersistenceService` define um contrato para salvar e carregar o estado da aplicação (vídeos assistidos, estado da árvore, etc.).
+
+*   A implementação `PersistenceService` lida com a serialização e desserialização de objetos para arquivos JSON, localizados na pasta `AppData` do usuário.
+
+*   Assim como o `IWindowManager`, este serviço é injetado no `MainWindowViewModel` para manter o baixo acoplamento e a testabilidade.
+
+
+
+### 6.4. IMediaPlayerService (Serviço de Reprodução de Mídia)
+
+
+
+Esta nova interface abstrai a funcionalidade de reprodução de mídia, permitindo que o ViewModel seja independente da implementação específica do player.
+
+
+
+*   A interface `IMediaPlayerService` define métodos como `PlayAsync` e `Stop` para controlar a reprodução.
+
+*   A implementação `MpvPlayerService` utiliza o `mpv.exe` como player externo, encapsulando a lógica de inicialização e controle do processo.
+
+*   `StubMediaPlayerService` é fornecido para fins de teste, permitindo que o ViewModel seja testado sem a necessidade de um player de mídia real.
+
+
+
+### 6.5. ITreeViewDataService (Serviço de Dados da TreeView)
+
+
+
+Esta nova interface centraliza toda a lógica de gerenciamento e manipulação dos dados exibidos na `TreeView`, incluindo carregamento, adição, remoção e persistência do estado.
+
+
+
+*   A interface `ITreeViewDataService` expõe a coleção `TreeRoot` e métodos para manipular a estrutura de pastas e vídeos, como `AddFolderOrVideo`, `RemoveFolder`, `LoadInitialTree`, `GetNextUnwatchedVideo`, `ContarVideos`, `AtualizarNomeComProgresso`, etc.
+
+*   A implementação `TreeViewDataService` lida com a leitura do sistema de arquivos, a criação dos `FolderItem` e `VideoItem`, e a interação com o `IPersistenceService` para salvar e carregar o estado da `TreeView` e dos vídeos assistidos.
+
+*   `StubTreeViewDataService` é fornecido para facilitar o teste do `MainWindowViewModel` isoladamente.

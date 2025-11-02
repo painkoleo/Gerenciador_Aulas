@@ -5,6 +5,13 @@
                           
                           >
     <Application.Resources>
-
+        <!-- Cores da Aplicação -->
+        <SolidColorBrush x:Key="BackgroundColor" Color="#1e1e1e" />
+        <SolidColorBrush x:Key="ForegroundColor" Color="White" />
+        <SolidColorBrush x:Key="PanelBackgroundColor" Color="#252526" />
+        <SolidColorBrush x:Key="AlternateRowBrush1" Color="#252526" />
+        <SolidColorBrush x:Key="AlternateRowBrush2" Color="#2D2D30" />
+        <SolidColorBrush x:Key="AccentColor" Color="#4A90E2" />
+        <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
     </Application.Resources>
 </Application>

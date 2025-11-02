@@ -12,7 +12,7 @@ namespace GerenciadorAulas.Views
         }
 
         // Manipuladores de Drag & Drop
-        private void Window_Drop(object sender, DragEventArgs e)
+        private async void Window_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
@@ -20,7 +20,7 @@ namespace GerenciadorAulas.Views
                 if (files.Length > 0 && DataContext is MainWindowViewModel viewModel)
                 {
                     // Usa a função pública do ViewModel para lidar com o drop
-                    viewModel.CarregarPastaDropOrAdd(files[0]);
+                    await viewModel.CarregarPastaDropOrAdd(files[0]);
                     viewModel.IsDragging = false;
                 }
             }

@@ -21,82 +21,39 @@ namespace GerenciadorAulas.ViewModels
 
     public class MainWindowViewModel : ViewModelBase
     {
-        // ----------------------------------------------------
-        // 🔹 MÉTODOS DE COMANDO (Implementações que estavam faltando)
-        // ----------------------------------------------------
+
 
         private void BtnStop_Click()
         {
             LogService.Log("Comando 'Parar Reprodução' acionado.");
             IsManuallyStopped = true;
-
-            // Finaliza a thread MPV se estiver rodando
-            if (mpvProcess != null)
-            {
-                try
-                {
-                    mpvProcess.Kill();
-                    mpvProcess.WaitForExit();
-                }
-                catch (Exception ex)
-                {
-                    LogService.Log($"Erro ao finalizar MPV: {ex.Message}");
-                }
-                finally
-                {
-                    mpvProcess?.Dispose();
-                    mpvProcess = null;
-                }
-            }
-
-            // Cancela qualquer tarefa de reprodução contínua
-            if (cts != null && !cts.IsCancellationRequested)
-            {
-                cts.Cancel();
-            }
-
+            _mediaPlayerService.Stop();
             VideoAtual = "";
         }
 
         private async Task BtnNextVideo_Click()
         {
             LogService.Log("Comando 'Próximo Vídeo' acionado.");
-            // Obtém todos os vídeos que NÃO estão checados (não assistidos)
-            var videosNaoAssistidos = TreeRoot.SelectMany(ObterVideosRecursivo)
-                                             .Where(v => !v.IsChecked)
-                                             .ToList();
-
-            if (!videosNaoAssistidos.Any())
-            {
-                _windowManager?.ShowMessageBox("Todos os vídeos foram assistidos!");
-                return;
-            }
-
-            // Pega o primeiro vídeo não assistido na ordem da TreeView
-            var nextVideo = videosNaoAssistidos.FirstOrDefault();
+            var nextVideo = _treeViewDataService.GetNextUnwatchedVideo();
 
             if (nextVideo != null)
             {
-                // Garante que o estado seja false antes de iniciar a reprodução.
                 IsManuallyStopped = false;
                 await ReproduzirVideosAsync(new[] { nextVideo });
+            }
+            else
+            {
+                _windowManager?.ShowMessageBox("Todos os vídeos foram assistidos!");
             }
         }
 
         private void BtnRefresh_Click()
         {
             LogService.Log("Comando 'Atualizar Lista' acionado.");
-            // Limpa tudo
-            TreeRoot.Clear();
-            itensCarregados.Clear();
-            VideosAssistidos.Clear();
-            FolderProgressList.Clear();
+            FolderProgressList.Clear(); // Clear only this, TreeRoot is managed by service
 
-            // Recarrega o estado salvo
-            CarregarEstadoVideosAssistidos();
-            CarregarEstadoTreeView();
+            _treeViewDataService.LoadInitialTree();
 
-            // Atualiza o progresso
             AtualizarProgresso();
         }
 
@@ -109,73 +66,38 @@ namespace GerenciadorAulas.ViewModels
             }
             LogService.Log($"Comando 'Remover Pasta Selecionada' acionado para: {selectedFolder.FullPath}");
 
-            // Remove do HashSet de itens carregados (recursivamente)
-            RemoverDoHashSetRecursivo(selectedFolder);
+            _treeViewDataService.RemoveFolder(selectedFolder);
 
-            // Remove do TreeRoot (se for uma pasta raiz)
-            if (selectedFolder.ParentFolder == null)
-            {
-                TreeRoot.Remove(selectedFolder);
-            }
-            else
-            {
-                // Se for subpasta, remove do pai
-                selectedFolder.ParentFolder.Children.Remove(selectedFolder);
-                AtualizarPais(selectedFolder.ParentFolder);
-            }
-
-            // Salva o novo estado
-            SalvarEstadoTreeView();
             AtualizarProgresso();
             OnPropertyChanged(nameof(TotalFolders));
             OnPropertyChanged(nameof(TotalVideos));
         }
 
-        private void RemoverDoHashSetRecursivo(FolderItem folder)
-        {
-            itensCarregados.Remove(folder.FullPath);
 
-            foreach (var child in folder.Children)
-            {
-                if (child is FolderItem childFolder)
-                {
-                    RemoverDoHashSetRecursivo(childFolder);
-                }
-                else if (child is VideoItem childVideo)
-                {
-                    itensCarregados.Remove(childVideo.FullPath);
-                }
-            }
-        }
         // ----------------------------------------------------
         // DEPENDÊNCIAS
         // ----------------------------------------------------
         private readonly IWindowManager _windowManager;
         private readonly IPersistenceService _persistenceService;
+        private readonly IMediaPlayerService _mediaPlayerService;
+        private readonly ITreeViewDataService _treeViewDataService;
 
 
         // ----------------------------------------------------
         // CAMPOS PRIVADOS E PATHS
         // ----------------------------------------------------
 
-        private CancellationTokenSource? cts;
-        private Process? mpvProcess;
-
         private Configuracoes _configuracoes;
         private string _videoAtual = "";
         private double _progressoGeral = 0;
         private bool _isManuallyStopped = false;
         private bool _isLoading = false; // Novo: Para a barra de progresso (indeterminado)
-        private bool _isInitializing = false;
         private bool _isDragging = false; // Novo: Para o feedback visual do Drag&Drop
-
-        private readonly HashSet<string> itensCarregados = new HashSet<string>();
-        private HashSet<string> VideosAssistidos { get; set; } = new HashSet<string>();
 
         // ----------------------------------------------------
         // COLEÇÕES E PROPRIEDADES OBSERVÁVEIS
         // ----------------------------------------------------
-        public ObservableCollection<object> TreeRoot { get; } = new ObservableCollection<object>();
+        public ObservableCollection<object> TreeRoot => _treeViewDataService.TreeRoot;
         public ObservableCollection<FolderProgressItem> FolderProgressList { get; } = new ObservableCollection<FolderProgressItem>();
 
         public Configuracoes Configuracoes
@@ -216,14 +138,14 @@ namespace GerenciadorAulas.ViewModels
 
         // Propriedades para o StackPanel do topo (stubs)
         public int TotalFolders => TreeRoot.OfType<FolderItem>().Count();
-        public int TotalVideos => TreeRoot.SelectMany(ObterVideosRecursivo).Count();
+        public int TotalVideos => TreeRoot.SelectMany(_treeViewDataService.GetAllVideosRecursive).Count();
 
         // ----------------------------------------------------
         // COMANDOS
         // ----------------------------------------------------
         public RelayCommand<VideoItem?> PlayVideoCommand { get; }
-        public RelayCommand<object?> PlaySelectedItemCommand { get; } // NOVO COMANDO AQUI
-        public RelayCommand<object?> NextVideoCommand { get; }
+        public AsyncRelayCommand<object?> PlaySelectedItemCommand { get; }
+        public AsyncRelayCommand<object?> NextVideoCommand { get; }
         public RelayCommand<object?> StopPlaybackCommand { get; }
         public RelayCommand<object?> RefreshListCommand { get; }
         public RelayCommand<string> AddFoldersCommand { get; }
@@ -237,28 +159,24 @@ namespace GerenciadorAulas.ViewModels
         // CONSTRUTORES
         // ----------------------------------------------------
 
-        public MainWindowViewModel() : this(new StubWindowManager(), new StubPersistenceService())
+        public MainWindowViewModel() : this(new StubWindowManager(), new StubPersistenceService(), new StubMediaPlayerService(), new StubTreeViewDataService())
         {
             // Construtor de Design-Time
         }
 
-        public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService)
+        public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService, IMediaPlayerService mediaPlayerService, ITreeViewDataService treeViewDataService)
         {
             LogService.Log("MainWindowViewModel inicializado.");
             _windowManager = windowManager;
             _persistenceService = persistenceService;
+            _mediaPlayerService = mediaPlayerService;
+            _treeViewDataService = treeViewDataService;
 
-            // 1. Inicializa Paths (agora gerenciado pelo PersistenceService)
-            // appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GerenciadorAulas");
-            // if (!Directory.Exists(appDataDir)) Directory.CreateDirectory(appDataDir);
-            // estadoArquivo = Path.Combine(appDataDir, "videos_assistidos.json");
-            // ultimoVideoArquivo = Path.Combine(appDataDir, "ultimo_video.json");
-            // estadoTreeArquivo = Path.Combine(appDataDir, "estadoTreeView.json");
+
 
             // 2. Carrega Configurações/Estado
             _configuracoes = ConfigManager.Carregar();
-            CarregarEstadoVideosAssistidos();
-            CarregarEstadoTreeView();
+            _treeViewDataService.LoadInitialTree();
 
             // 3. Inicializa Comandos
 
@@ -268,7 +186,10 @@ namespace GerenciadorAulas.ViewModels
                 {
                     LogService.Log($"Comando 'Reproduzir Vídeo' acionado para: {video.FullPath}");
                     IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
-                    await ReproduzirVideosAsync(new[] { video });
+                    await _mediaPlayerService.PlayAsync(video);
+                    VideoAtual = $"Reproduzindo: {video.Name}";
+                    video.IsChecked = true;
+                    SalvarUltimoVideo(video.FullPath);
                 }
                 else
                 {
@@ -277,27 +198,21 @@ namespace GerenciadorAulas.ViewModels
             });
 
             // NOVO COMANDO PARA TRATAR SELEÇÃO DE PASTA OU VÍDEO
-            PlaySelectedItemCommand = new RelayCommand<object?>(async item =>
+            PlaySelectedItemCommand = new AsyncRelayCommand<object?>(async item =>
             {
                 LogService.Log("Comando 'Reproduzir Item Selecionado' acionado.");
 
-                // CORREÇÃO: Reseta o estado de parada manual para permitir que o Play funcione
-                // mesmo após um Stop/Pause.
                 IsManuallyStopped = false;
 
                 if (item is VideoItem video)
                 {
-                    // Caso 1: Item selecionado é um vídeo. Toca ele.
-                    LogService.Log($"Reproduzindo vídeo selecionado: {video.FullPath}");
                     await ReproduzirVideosAsync(new[] { video });
                 }
                 else if (item is FolderItem folder)
                 {
-                    // Caso 2: Item selecionado é uma pasta. Tenta tocar o próximo vídeo DENTRO dela.
                     LogService.Log($"Play acionado em pasta: {folder.Name}. Buscando primeiro vídeo não assistido dentro.");
 
-                    // Procura o primeiro vídeo não assistido dentro da pasta (recursivamente)
-                    var nextVideoInFolder = ObterVideosRecursivo(folder)
+                    var nextVideoInFolder = _treeViewDataService.GetVideosRecursive(folder)
                                                  .FirstOrDefault(v => !v.IsChecked);
 
                     if (nextVideoInFolder != null)
@@ -315,20 +230,19 @@ namespace GerenciadorAulas.ViewModels
                 {
                     LogService.LogWarning("Comando 'Reproduzir Item Selecionado' acionado, mas o item é nulo ou de um tipo não suportado.");
                 }
-                // Se for null ou outro tipo, ignora
             });
             // FIM NOVO COMANDO
 
-            NextVideoCommand = new RelayCommand<object?>(async _ => await BtnNextVideo_Click());
+            NextVideoCommand = new AsyncRelayCommand<object?>(async _ => await BtnNextVideo_Click());
             StopPlaybackCommand = new RelayCommand<object?>(_ => BtnStop_Click());
             RefreshListCommand = new RelayCommand<object?>(_ => BtnRefresh_Click());
 
-            AddFoldersCommand = new RelayCommand<string>(path =>
+            AddFoldersCommand = new RelayCommand<string>(async path =>
             {
                 if (path != null && Directory.Exists(path))
                 {
                     LogService.Log($"Comando 'Adicionar Pastas' acionado com caminho: {path}");
-                    CarregarPastaDropOrAdd(path);
+                    await CarregarPastaDropOrAdd(path);
                 }
                 else
                 {
@@ -348,14 +262,14 @@ namespace GerenciadorAulas.ViewModels
                 _windowManager.ShowConfigWindow(Configuracoes);
             });
 
-            BrowseFoldersCommand = new RelayCommand<object?>(_ =>
+            BrowseFoldersCommand = new RelayCommand<object?>(async _ =>
             {
                 LogService.Log("Comando 'Procurar Pastas' acionado.");
                 string? selectedPath = _windowManager.OpenFolderDialog();
                 if (selectedPath != null)
                 {
                     LogService.Log($"Pasta selecionada via diálogo: {selectedPath}");
-                    CarregarPastaDropOrAdd(selectedPath);
+                    await CarregarPastaDropOrAdd(selectedPath);
                 }
                 else
                 {
@@ -376,7 +290,7 @@ namespace GerenciadorAulas.ViewModels
         // 🔹 Carregamento e Drag & Drop
         // ----------------------------------------------------
 
-        public async void CarregarPastaDropOrAdd(string? path)
+        public async Task CarregarPastaDropOrAdd(string? path)
         {
             if (string.IsNullOrEmpty(path))
             {
@@ -386,175 +300,37 @@ namespace GerenciadorAulas.ViewModels
             LogService.Log($"Iniciando carregamento de pasta/vídeo: {path}");
             IsLoading = true; // Inicia o indicador de progresso
 
-            var itemsToAdd = await Task.Run(() =>
+            try
             {
-                var newItems = new List<object>();
-                if (Directory.Exists(path))
-                {
-                    var newItem = CarregarPastaRecursivaSeNaoExistir(path, TreeRoot);
-                    if (newItem != null)
-                    {
-                        newItems.Add(newItem);
-                    }
-                }
-                else if (File.Exists(path) && EhVideo(path))
-                {
-                    var newItem = AdicionarVideoRecursivoSeNaoExistir(path, TreeRoot);
-                    if (newItem != null)
-                    {
-                        newItems.Add(newItem);
-                    }
-                }
-                return newItems;
-            });
-
-            foreach (var item in itemsToAdd)
-            {
-                TreeRoot.Add(item);
+                await _treeViewDataService.AddFolderOrVideo(path);
             }
-
-            SalvarEstadoTreeView();
-            AtualizarProgresso();
-            OnPropertyChanged(nameof(TotalFolders));
-            OnPropertyChanged(nameof(TotalVideos));
-            IsLoading = false; // Finaliza o indicador
-        }
-
-        private FolderItem? CarregarPastaRecursivaSeNaoExistir(string path, ObservableCollection<object> parent)
-        {
-            if (itensCarregados.Contains(path)) return null;
-
-            var folder = CriarFolderItem(path, null);
-            CarregarPasta(path, folder.Children, folder);
-
-            if (ObterVideosRecursivo(folder).Any() || folder.Children.OfType<FolderItem>().Any())
+            catch (Exception ex)
             {
-                itensCarregados.Add(path);
-                AtualizarCheckboxFolder(folder);
-                AtualizarNomeComProgresso(folder);
-                return folder;
+                LogService.LogError($"Erro ao carregar pasta ou vídeo via Drag&Drop/Adicionar: {ex.Message}", ex);
+                _windowManager?.ShowMessageBox($"Erro ao carregar: {ex.Message}");
             }
-            return null;
-        }
-
-        // ... (outros métodos de carregamento de pastas e vídeos) ...
-
-        private void CarregarPasta(string path, ObservableCollection<object> parent, FolderItem? parentFolder)
-        {
-            if (!Directory.Exists(path)) return;
-
-            // Carregar subpastas
-            foreach (var dir in OrdenarNumericamente(Directory.GetDirectories(path)))
+            finally
             {
-                try
-                {
-                    if (itensCarregados.Contains(dir)) continue;
-
-                    var folder = CriarFolderItem(dir, parentFolder);
-                    CarregarPasta(dir, folder.Children, folder);
-
-                    if (ObterVideosRecursivo(folder).Any() || folder.Children.OfType<FolderItem>().Any())
-                    {
-                        parent.Add(folder);
-                        itensCarregados.Add(dir);
-                        AtualizarCheckboxFolder(folder);
-                        AtualizarNomeComProgresso(folder);
-                    }
-                }
-                catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar pasta {dir}: {ex.Message}", ex); }
-                catch (PathTooLongException ex) { LogService.LogError($"Caminho muito longo ao carregar pasta {dir}: {ex.Message}", ex); }
-                catch (DirectoryNotFoundException ex) { LogService.LogError($"Pasta não encontrada ao carregar pasta {dir}: {ex.Message}", ex); }
-                catch (IOException ex) { LogService.LogError($"Erro de I/O ao carregar pasta {dir}: {ex.Message}", ex); }
-                catch (Exception ex) { LogService.LogError($"Erro inesperado ao carregar pasta {dir}: {ex.Message}", ex); }
-            }
-
-            // Carregar arquivos
-            foreach (var file in OrdenarNumericamente(Directory.GetFiles(path)).Where(EhVideo))
-            {
-                try
-                {
-                    if (!itensCarregados.Contains(file))
-                    {
-                        parent.Add(CriarVideoItem(file, parentFolder));
-                        itensCarregados.Add(file);
-                    }
-                }
-                catch (UnauthorizedAccessException ex) { LogService.LogError($"Erro de permissão ao carregar arquivo {file}: {ex.Message}", ex); }
-                catch (PathTooLongException ex) { LogService.LogError($"Caminho muito longo ao carregar arquivo {file}: {ex.Message}", ex); }
-                catch (FileNotFoundException ex) { LogService.LogError($"Arquivo não encontrado ao carregar arquivo {file}: {ex.Message}", ex); }
-                catch (IOException ex) { LogService.LogError($"Erro de I/O ao carregar arquivo {file}: {ex.Message}", ex); }
-                catch (Exception ex) { LogService.LogError($"Erro inesperado ao carregar arquivo {file}: {ex.Message}", ex); }
+                AtualizarProgresso();
+                OnPropertyChanged(nameof(TotalFolders));
+                OnPropertyChanged(nameof(TotalVideos));
+                IsLoading = false; // Finaliza o indicador
             }
         }
 
-        private VideoItem? AdicionarVideoRecursivoSeNaoExistir(string path, ObservableCollection<object> parent)
-        {
-            if (itensCarregados.Contains(path)) return null;
 
-            var video = CriarVideoItem(path, null);
-            itensCarregados.Add(path);
-            return video;
-        }
 
-        private FolderItem CriarFolderItem(string dir, FolderItem? parentFolder)
-        {
-            var folder = new FolderItem
-            {
-                Name = Path.GetFileName(dir) ?? "",
-                FullPath = dir,
-                Children = new ObservableCollection<object>(),
-                ParentFolder = parentFolder,
-                DisplayName = Path.GetFileName(dir) ?? "" // Inicializa DisplayName
-            };
 
-            folder.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(FolderItem.IsChecked))
-                {
-                    if (folder.IsChecked.HasValue)
-                        folder.MarcarFilhos(folder.IsChecked.Value);
 
-                    AtualizarPais(folder.ParentFolder);
-                    SalvarEstadoTreeView();
 
-                    Application.Current.Dispatcher.Invoke(AtualizarProgresso);
-                }
-                else if (e.PropertyName == nameof(FolderItem.IsExpanded))
-                {
-                    SalvarEstadoTreeView();
-                }
-            };
-            return folder;
-        }
 
-        private VideoItem CriarVideoItem(string file, FolderItem? parentFolder)
-        {
-            var video = new VideoItem
-            {
-                Name = Path.GetFileName(file) ?? "",
-                FullPath = file,
-                ParentFolder = parentFolder,
-                IsChecked = VideosAssistidos.Contains(file)
-            };
 
-            video.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName == nameof(VideoItem.IsChecked))
-                {
-                    if (video.IsChecked) VideosAssistidos.Add(video.FullPath);
-                    else VideosAssistidos.Remove(video.FullPath);
 
-                    AtualizarPais(video.ParentFolder);
-                    SalvarEstadoVideosAssistidos();
-                    SalvarEstadoTreeView();
 
-                    Application.Current.Dispatcher.Invoke(AtualizarProgresso);
-                }
-            };
-            return video;
-        }
 
-        // ... (outros métodos auxiliares de progresso e TreeView) ...
+
+
+
 
         public void AtualizarProgresso()
         {
@@ -567,7 +343,7 @@ namespace GerenciadorAulas.ViewModels
 
                 foreach (var rootFolder in rootFolders)
                 {
-                    var (t, m) = ContarVideos(rootFolder);
+                    var (t, m) = _treeViewDataService.ContarVideos(rootFolder);
                     totalGeral += t;
                     marcadosGeral += m;
 
@@ -579,7 +355,7 @@ namespace GerenciadorAulas.ViewModels
                     };
                     FolderProgressList.Add(newItem);
 
-                    AtualizarNomeComProgresso(rootFolder);
+                    _treeViewDataService.AtualizarNomeComProgresso(rootFolder);
                 }
 
                 ProgressoGeral = totalGeral == 0 ? 0 : (double)marcadosGeral / totalGeral * 100;
@@ -600,326 +376,85 @@ namespace GerenciadorAulas.ViewModels
             }
             LogService.Log($"Iniciando reprodução assíncrona de {videoList.Count} vídeo(s). Primeiro vídeo: {videoList.FirstOrDefault()?.FullPath}");
 
-            // Validação do MPV antes de qualquer outra coisa
-            if (!IsMpvPathValid())
-            {
-                LogService.LogError("Caminho do MPV inválido. Solicitando configuração ao usuário.");
-                _windowManager?.ShowMessageBox("O caminho para o executável do MPV não foi configurado ou é inválido. Por favor, configure-o agora.");
-                _windowManager?.ShowConfigWindow(Configuracoes);
+            IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
 
-                // Re-valida após o usuário (potencialmente) corrigir o caminho.
-                if (!IsMpvPathValid()) return;
-            }
-
-            // O comando Play (PlaySelectedItemCommand) já deve ter garantido que IsManuallyStopped = false.
-            // REMOVIDA a checagem if (IsManuallyStopped), que estava bloqueando o Play após um Stop.
-
-            // Mata qualquer processo MPV anterior (o que setará IsManuallyStopped = true)
-            BtnStop_Click();
-
-            // CORREÇÃO: Reseta o estado para false. Isso permite que:
-            // 1. A reprodução comece.
-            // 2. A lógica de reprodução contínua (Configuracoes.ReproducaoContinua) funcione.
-            IsManuallyStopped = false;
-
-            cts = new CancellationTokenSource();
-            bool allVideosPlayed = true;
-
-            try
+            foreach (var video in videoList)
             {
-                await Task.Run(() => PlayVideosLista(videoList, cts.Token));
-            }
-            catch (OperationCanceledException)
-            {
-                allVideosPlayed = false;
-            }
-            catch (Exception ex)
-            {
-                // Verificação de nulidade para o WindowManager
-                _windowManager?.ShowMessageBox($"Erro ao reproduzir vídeo: {ex.Message}");
-                allVideosPlayed = false;
-            }
-            finally
-            {
-                VideoAtual = "";
-                cts?.Dispose();
-                cts = null;
-            }
+                if (IsManuallyStopped) break; // Interrompe se o usuário parou manualmente
 
-            if (Configuracoes.ReproducaoContinua && allVideosPlayed && !IsManuallyStopped)
-            {
-                await Application.Current.Dispatcher.InvokeAsync(async () => await BtnNextVideo_Click());
-            }
-            else if (!Configuracoes.ReproducaoContinua && allVideosPlayed)
-            {
-                // Se a reprodução contínua não estiver ativa, define como parado ao final da lista.
-                IsManuallyStopped = true;
-            }
-        }
-
-        private void PlayVideosLista(List<VideoItem> videos, CancellationToken token)
-        {
-            foreach (var video in videos)
-            {
-                token.ThrowIfCancellationRequested();
                 LogService.Log($"Reproduzindo vídeo: {video.FullPath}");
+                VideoAtual = $"Reproduzindo: {video.Name}";
 
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    video.IsChecked = true;
-                    SalvarUltimoVideo(video.FullPath);
-                    VideoAtual = $"Reproduzindo: {video.Name}";
-                });
+                await _mediaPlayerService.PlayAsync(video);
 
-                // A validação principal agora é feita em ReproduzirVideosAsync.
-                // Esta é uma última verificação de segurança.
-                if (!IsMpvPathValid())
-                {
-                    throw new InvalidOperationException("Caminho do MPV inválido.");
-                }
+                // Marca como assistido e salva o último vídeo
+                video.IsChecked = true;
+                SalvarUltimoVideo(video.FullPath);
 
-                try
+                // Se a reprodução contínua estiver desativada, para após o primeiro vídeo
+                if (!Configuracoes.ReproducaoContinua)
                 {
-                    string args = (Configuracoes.MPVFullscreen ? "--fullscreen " : "") + $"\"{video.FullPath}\"";
-
-                    mpvProcess = Process.Start(new ProcessStartInfo
-                    {
-                        FileName = Configuracoes.MPVPath,
-                        Arguments = args,
-                        UseShellExecute = false
-                    });
-
-                    mpvProcess?.WaitForExit();
-
-                    mpvProcess?.Dispose();
-                    mpvProcess = null;
-                }
-                catch (FileNotFoundException ex)
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _windowManager?.ShowMessageBox($"Erro: O executável do MPV não foi encontrado em '{Configuracoes.MPVPath}'. Verifique o caminho nas Configurações. Erro: {ex.Message}");
-                        LogService.LogError($"Erro: Executável do MPV não encontrado. Caminho: {Configuracoes.MPVPath}", ex);
-                    });
-                }
-                catch (InvalidOperationException ex)
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _windowManager?.ShowMessageBox($"Erro ao iniciar o MPV: Operação inválida. Verifique o caminho em Configurações. Erro: {ex.Message}");
-                        LogService.LogError($"Erro ao iniciar o MPV: Operação inválida. Caminho: {Configuracoes.MPVPath}", ex);
-                    });
-                }
-                catch (System.ComponentModel.Win32Exception ex) // Specific for Process.Start errors
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _windowManager?.ShowMessageBox($"Erro do sistema ao iniciar o MPV: {ex.Message}. Verifique as permissões ou se o MPV está corrompido.");
-                        LogService.LogError($"Erro do sistema ao iniciar o MPV. Caminho: {Configuracoes.MPVPath}", ex);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        _windowManager?.ShowMessageBox($"Erro inesperado ao abrir o MPV: {ex.Message}. Verifique o caminho em Configurações.");
-                        LogService.LogError($"Erro inesperado ao abrir o MPV. Caminho: {Configuracoes.MPVPath}", ex);
-                    });
+                    IsManuallyStopped = true;
+                    break;
                 }
             }
+
+            await HandlePlaybackCompletion();
         }
 
-        private bool IsMpvPathValid()
+        private async Task HandlePlaybackCompletion()
         {
-            return !string.IsNullOrEmpty(Configuracoes.MPVPath) && File.Exists(Configuracoes.MPVPath);
+            VideoAtual = ""; // Limpa o vídeo atual após a reprodução
+            LogService.Log($"[MainWindowViewModel] HandlePlaybackCompletion: Configuracoes.ReproducaoContinua = {Configuracoes.ReproducaoContinua}, IsManuallyStopped = {IsManuallyStopped}");
+
+            if (Configuracoes.ReproducaoContinua && !IsManuallyStopped)
+            {
+                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Chamando BtnNextVideo_Click para reprodução contínua.");
+                await Application.Current.Dispatcher.InvokeAsync(new Func<Task>(BtnNextVideo_Click));
+            }
+            else if (!Configuracoes.ReproducaoContinua && !IsManuallyStopped)
+            {
+                IsManuallyStopped = true;
+                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Reprodução contínua desativada, definindo IsManuallyStopped como true.");
+            }
+            else if (IsManuallyStopped)
+            {
+                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Reprodução parada manualmente.");
+            }
         }
 
         // Funções Auxiliares (mantidas para a funcionalidade da TreeView)
-        private (int total, int marked) ContarVideos(object item)
-        {
-            int total = 0, marcados = 0;
 
-            if (item is VideoItem v)
-            {
-                total = 1;
-                if (v.IsChecked) marcados = 1;
-            }
-            else if (item is FolderItem f)
-            {
-                foreach (var child in f.Children)
-                {
-                    var (childTotal, childMarked) = ContarVideos(child);
-                    total += childTotal;
-                    marcados += childMarked;
-                }
-            }
-            return (total, marcados);
-        }
 
-        private void AtualizarCheckboxFolder(FolderItem folder)
-        {
-            var (total, marcados) = ContarVideos(folder);
-            folder.IsChecked = (marcados == 0 ? false : marcados == total ? true : null);
-        }
 
-        private void AtualizarPais(FolderItem? folder)
-        {
-            if (folder == null) return;
 
-            var (total, marcados) = ContarVideos(folder);
-            folder.IsChecked = (marcados == 0 ? false : marcados == total ? true : null);
 
-            AtualizarNomeComProgresso(folder);
-            AtualizarPais(folder.ParentFolder);
-        }
 
-        private void AtualizarNomeComProgresso(FolderItem folder)
-        {
-            var (total, marcados) = ContarVideos(folder);
 
-            string baseName = folder.Name.Split('(')[0].Trim();
-            folder.DisplayName = $"{baseName} ({marcados}/{total})";
 
-            foreach (var item in folder.Children.OfType<FolderItem>())
-                AtualizarNomeComProgresso(item);
-        }
 
-        // ... (Implementações de persistência) ...
 
-        private void SalvarEstadoVideosAssistidos()
-        {
-            LogService.Log("Salvando estado dos vídeos assistidos.");
-            _persistenceService.SaveWatchedVideos(VideosAssistidos);
-        }
 
-        private void CarregarEstadoVideosAssistidos()
-        {
-            LogService.Log("Carregando estado dos vídeos assistidos.");
-            VideosAssistidos = _persistenceService.LoadWatchedVideos();
-        }
 
-        private void SalvarEstadoTreeView()
-        {
-            if (_isInitializing) return;
 
-            LogService.Log("Salvando estado da TreeView.");
-            var estado = new TreeViewEstado();
 
-            foreach (var item in TreeRoot)
-                SalvarEstadoRecursivo(item, estado);
 
-            _persistenceService.SaveTreeViewEstado(estado);
-        }
 
-        private void SalvarEstadoRecursivo(object item, TreeViewEstado estado)
-        {
-            switch (item)
-            {
-                case FolderItem f:
-                    if (f.ParentFolder == null) estado.Pastas.Add(f.FullPath);
 
-                    if (f.IsExpanded) estado.PastasExpandidas.Add(f.FullPath);
 
-                    foreach (var child in f.Children)
-                        SalvarEstadoRecursivo(child, estado);
-                    break;
-                case VideoItem v:
-                    break;
-            }
-        }
 
-        private void CarregarEstadoTreeView()
-        {
-            LogService.Log("Carregando estado da TreeView.");
-            var estado = _persistenceService.LoadTreeViewEstado();
-            if (estado == null)
-            {
-                LogService.Log("Nenhum estado da TreeView encontrado para carregar.");
-                return;
-            }
 
-            _isInitializing = true;
-            try
-            {
-                // Carrega as pastas raiz
-                foreach (var folderPath in estado.Pastas)
-                {
-                    if (Directory.Exists(folderPath) && !itensCarregados.Contains(folderPath))
-                    {
-                        // Precisa rodar em Task.Run, mas aqui chamamos a versão síncrona para inicialização
-                        CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
-                    }
-                }
 
-                // Restaura estados (expandido, checado)
-                foreach (var item in TreeRoot)
-                    RestaurarEstadoRecursivo(item, estado);
-            }
-            finally
-            {
-                _isInitializing = false;
-            }
-        }
 
-        // Versão Síncrona para inicialização (usada pelo CarregarEstadoTreeView)
-        private void CarregarPastaRecursivaSincrona(string path, ObservableCollection<object> parent)
-        {
-            if (itensCarregados.Contains(path)) return;
 
-            var folder = CriarFolderItem(path, null);
-            CarregarPasta(path, folder.Children, folder);
 
-            if (ObterVideosRecursivo(folder).Any() || folder.Children.OfType<FolderItem>().Any())
-            {
-                parent.Add(folder);
-                itensCarregados.Add(path);
-                // Não precisa atualizar o checkbox e nome aqui, pois RestaurarEstadoRecursivo fará isso
-            }
-        }
 
-        private void RestaurarEstadoRecursivo(object item, TreeViewEstado estado)
-        {
-            switch (item)
-            {
-                case FolderItem f:
-                    // Restaurar estado de expansão
-                    f.IsExpanded = estado.PastasExpandidas.Contains(f.FullPath);
 
-                    // Atualizar checkbox e nome (progresso)
-                    AtualizarCheckboxFolder(f);
-                    AtualizarNomeComProgresso(f);
 
-                    foreach (var child in f.Children)
-                        RestaurarEstadoRecursivo(child, estado);
-                    break;
-                case VideoItem v:
-                    // Vídeos são restaurados implicitamente via VideosAssistidos, mas forçamos a atualização
-                    v.IsChecked = VideosAssistidos.Contains(v.FullPath);
-                    break;
-            }
-        }
 
-        // ... (Outras Funções Auxiliares) ...
 
-        private IEnumerable<VideoItem> ObterVideosRecursivo(object item)
-        {
-            if (item is VideoItem v) yield return v;
-            else if (item is FolderItem f)
-                foreach (var child in f.Children)
-                    foreach (var vid in ObterVideosRecursivo(child))
-                        yield return vid;
-        }
 
-        private bool EhVideo(string path) => Configuracoes.VideoExtensions.Contains((Path.GetExtension(path) ?? string.Empty).ToLowerInvariant());
 
-        private IEnumerable<string> OrdenarNumericamente(IEnumerable<string> paths)
-        {
-            return paths.OrderBy(p =>
-            {
-                string name = Path.GetFileNameWithoutExtension(p) ?? "";
-                return int.TryParse(new string(name.TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
-            }).ThenBy(Path.GetFileName);
-        }
 
         private void SalvarUltimoVideo(string caminho)
         {

@@ -7,7 +7,7 @@
     xmlns:helpers="clr-namespace:GerenciadorAulas.Helpers"
     Title="Gerenciador de Aulas 2.0"
     Height="720" Width="900"
-    Background="#1e1e1e" Foreground="White"
+    Background="{StaticResource BackgroundColor}" Foreground="{StaticResource ForegroundColor}"
     FontFamily="Segoe UI"
 
     AllowDrop="True"
@@ -20,17 +20,24 @@
 
         <converters:BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
 
-        <converters:AlternatingRowBrushConverter x:Key="ZebraConverter" Brush1="#252526" Brush2="#2D2D30"/>
+        <converters:AlternatingRowBrushConverter x:Key="ZebraConverter" Brush1="{StaticResource AlternateRowBrush1}" Brush2="{StaticResource AlternateRowBrush2}"/>
+
+        <SolidColorBrush x:Key="ButtonHoverColor" Color="#30FFFFFF"/> <!-- Exemplo: AccentColor com 30% de opacidade -->
 
         <Style TargetType="Button">
             <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="28"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource TransparentBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="3"/>
             <Setter Property="Margin" Value="0,4,0,0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{StaticResource ButtonHoverColor}"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -94,7 +101,7 @@
                 </Button>
             </Grid>
 
-            <Border Grid.Column="1" Background="#252526" CornerRadius="10" Padding="5">
+            <Border Grid.Column="1" Background="{StaticResource PanelBackgroundColor}" CornerRadius="10" Padding="5">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="BorderThickness" Value="0"/>
@@ -102,7 +109,7 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsDragging}" Value="True">
                                 <Setter Property="BorderThickness" Value="2"/>
-                                <Setter Property="BorderBrush" Value="#4A90E2"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentColor}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -110,7 +117,7 @@
                 <TreeView x:Name="treeModules"
                     Grid.Column="1"
                     ItemsSource="{Binding TreeRoot}"
-                    Background="Transparent"
+                    Background="{StaticResource TransparentBrush}"
                     BorderThickness="0"
                     Margin="0"
                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -122,7 +129,7 @@
                         <Style TargetType="{x:Type TreeViewItem}">
                             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
 
-                            <Setter Property="Foreground" Value="White" />
+                            <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
 
                             <Setter Property="Background" Value="{Binding
                                 RelativeSource={RelativeSource Self},
@@ -133,20 +140,20 @@
 
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#4A90E2" />
-                                    <Setter Property="Foreground" Value="White" />
+                                    <Setter Property="Background" Value="{StaticResource AccentColor}" />
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
                                 </Trigger>
                                 <MultiTrigger>
                                     <MultiTrigger.Conditions>
                                         <Condition Property="IsSelected" Value="True"/>
                                         <Condition Property="IsSelectionActive" Value="False"/>
                                     </MultiTrigger.Conditions>
-                                    <Setter Property="Background" Value="#2d2d30"/>
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Background" Value="{StaticResource AlternateRowBrush2}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
                                 </MultiTrigger>
 
                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=HasItems}" Value="True">
-                                    <Setter Property="helpers:TreeViewItemHelper.ExpanderForeground" Value="White"/>
+                                    <Setter Property="helpers:TreeViewItemHelper.ExpanderForeground" Value="{StaticResource ForegroundColor}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -178,7 +185,7 @@
         <ProgressBar Grid.Row="2" Height="6" Margin="0,10,0,0"
             IsIndeterminate="{Binding IsLoading}"
             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"
-            Foreground="#4A90E2"/>
+            Foreground="{StaticResource AccentColor}"/>
 
     </Grid>
 </Window>
