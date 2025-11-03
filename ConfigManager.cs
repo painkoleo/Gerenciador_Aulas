@@ -35,6 +35,10 @@ namespace GerenciadorAulas
                 {
                     LogService.Log($"Configuração alterada: MPVPath de '{oldConfig.MPVPath}' para '{config.MPVPath}'");
                 }
+                if (config.LogDirectory != oldConfig.LogDirectory)
+                {
+                    LogService.Log($"Configuração alterada: LogDirectory de '{oldConfig.LogDirectory}' para '{config.LogDirectory}'");
+                }
 
                 string dir = Path.GetDirectoryName(arquivoConfig)!;
                 if (!Directory.Exists(dir))

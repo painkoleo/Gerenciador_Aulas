@@ -176,7 +176,7 @@ O `LogService` é uma classe estática utilizada para centralizar o registro de 
 
 
 
-*   **Função:** Escreve mensagens com *timestamp* em arquivos `Log_YYYYMMDD_HHMMSS.txt`, localizados na pasta `logs` na raiz do projeto.
+*   **Função:** Escreve mensagens com *timestamp* em arquivos `Log_YYYYMMDD_HHMMSS.txt`, localizados na pasta `logs` dentro do diretório de dados da aplicação do usuário (`%APPDATA%\GerenciadorAulas\logs`).
 
 *   **Segurança de Threads:** Utiliza `lock (typeof(LogService))` para garantir que a escrita no arquivo seja segura em um ambiente multi-thread.
 

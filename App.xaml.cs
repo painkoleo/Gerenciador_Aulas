@@ -52,7 +52,7 @@ namespace GerenciadorAulas
             try
             {
                 // Define o diretório para os logs na pasta local do projeto
-                string logDirectory = "logs";
+                string logDirectory = ConfigManager.Carregar().LogDirectory;
 
                 // Inicializa o serviço de log
                 LogService.Initialize(logDirectory);
