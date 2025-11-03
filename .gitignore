@@ -1,9 +1,0 @@
-# IDE and build artifacts
-[Bb]in/
-[Oo]bj/
-
-# Log files
-logs/
-
-
-.gitignore
