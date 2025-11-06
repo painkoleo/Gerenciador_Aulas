@@ -9,6 +9,7 @@
     * [2.2. Rastreamento de Progresso](#22-rastreamento-de-progresso)
     * [2.3. Controles de Reprodução](#23-controles-de-reprodução)
     * [2.4. Configurações (Player MPV)](#24-configurações-player-mpv)
+    * [2.5. Funcionalidades Adicionais](#25-funcionalidades-adicionais)
 3. [Arquitetura do Sistema (MVVM)](#3-arquitetura-do-sistema-mvvm)
     * [3.1. Componentes Principais](#31-componentes-principais)
 4. [Detalhes do ViewModel (`MainWindowViewModel.cs`)](#4-detalhes-do-viewmodel-mainwindowviewmodelcs)
@@ -68,13 +69,15 @@ O progresso é rastreado através da `TreeView` e da caixa de seleção (checkbo
 
 ### 2.3. Controles de Reprodução
 
-Os controles de mídia na barra de ferramentas permitem gerenciar a reprodução de vídeos:
+Os controles de mídia na barra de ferramentas e através de menus de contexto permitem gerenciar a reprodução de vídeos:
 
 | Botão | Função | Comportamento |
 | :--- | :--- | :--- |
 | **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. |
 | **Stop** | Parar | Finaliza o player MPV e encerra a reprodução contínua. |
 | **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
+
+* **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
 
 ### 2.4. Configurações (Player MPV)
 
@@ -84,6 +87,28 @@ Os controles de mídia na barra de ferramentas permitem gerenciar a reprodução
 2.  Defina o **Caminho do Executável MPV**: Indique o local do arquivo `mpv.exe` na sua máquina.
 3.  **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente após o término do vídeo atual.
 4.  **Tela Cheia (Fullscreen):** Marque para que o MPV sempre inicie em modo tela cheia.
+
+### 2.5. Funcionalidades Adicionais
+
+#### 2.5.1. Melhorias na Interação com a TreeView
+
+*   **Seleção Múltipla:** Agora é possível selecionar múltiplos itens na `TreeView` utilizando a tecla `Ctrl`.
+*   **Botões "Marcar Selecionados" e "Desmarcar Selecionados":** Dois novos botões foram adicionados na parte superior da `TreeView` para marcar ou desmarcar rapidamente todos os itens atualmente selecionados.
+*   **Dicas de Ferramenta (Tooltips):** Todos os botões da interface agora exibem uma dica de ferramenta ao passar o mouse, descrevendo sua função.
+*   **Remoção do Menu de Contexto "Marcar Selecionados":** Devido a problemas de funcionalidade, a opção "Marcar Selecionados" foi removida do menu de contexto da `TreeView`. A funcionalidade equivalente está disponível através do botão dedicado.
+
+#### Minimizar para a Bandeja
+
+Quando a opção "Minimizar para bandeja ao fechar" está ativada nas configurações, o comportamento do botão de fechar da janela principal é alterado. Ao invés de fechar a aplicação, a janela será escondida e um ícone será exibido na bandeja do sistema (próximo ao relógio).
+
+#### Menu de Contexto da Bandeja
+
+Ao clicar com o botão direito no ícone do Gerenciador de Aulas na bandeja do sistema, um menu de contexto será exibido com as seguintes opções:
+
+*   **Restaurar:** Torna a janela principal do aplicativo visível novamente.
+*   **Fechar:** Encerra completamente a aplicação.
+
+Um duplo clique no ícone da bandeja também restaura a janela principal.
 
 ---
 

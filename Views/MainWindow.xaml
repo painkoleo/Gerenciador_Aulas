@@ -39,6 +39,9 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <helpers:DataContextProxy x:Key="DataContextProxy" DataContext="{Binding}" />
+
     </Window.Resources>
 
     <Grid Margin="0">
@@ -70,33 +73,33 @@
 
                 <StackPanel Grid.Row="0" Orientation="Vertical" HorizontalAlignment="Center">
 
-                    <Button x:Name="BtnSelectFolder" Command="{Binding BrowseFoldersCommand}">
+                    <Button x:Name="BtnSelectFolder" Command="{Binding BrowseFoldersCommand}" ToolTip="Selecionar Pasta">
                         <Image Source="pack://application:,,,/Resources/folder.png" Stretch="Uniform"/>
                     </Button>
 
-                    <Button Command="{Binding PlaySelectedItemCommand}" CommandParameter="{Binding SelectedItem, ElementName=treeModules}">
+                    <Button Command="{Binding PlaySelectedItemCommand}" CommandParameter="{Binding SelectedItem, ElementName=treeModules}" ToolTip="Reproduzir Item Selecionado">
     					<Image Source="pack://application:,,,/Resources/play.png" Stretch="Uniform"/>
 					</Button>
 
-                    <Button x:Name="BtnStop" Command="{Binding StopPlaybackCommand}">
+                    <Button x:Name="BtnStop" Command="{Binding StopPlaybackCommand}" ToolTip="Parar Reprodução">
                         <Image Source="pack://application:,,,/Resources/stop.png" Stretch="Uniform"/>
                     </Button>
 
-                    <Button Command="{Binding RefreshListCommand}">
+                    <Button Command="{Binding RefreshListCommand}" ToolTip="Atualizar Lista">
                         <Image Source="pack://application:,,,/Resources/refresh.png" Stretch="Uniform"/>
                     </Button>
 
-                    <Button x:Name="BtnRemoveSelectedFolder" Command="{Binding ClearSelectedFolderCommand}" CommandParameter="{Binding SelectedItem, ElementName=treeModules}">
+                    <Button x:Name="BtnRemoveSelectedFolder" Command="{Binding ClearSelectedFolderCommand}" CommandParameter="{Binding SelectedItem, ElementName=treeModules}" ToolTip="Remover Pasta Selecionada">
                         <Image Source="pack://application:,,,/Resources/delete.png" Stretch="Uniform"/>
                     </Button>
 
-                    <Button x:Name="BtnFolderProgress" Command="{Binding ShowProgressCommand}">
+                    <Button x:Name="BtnFolderProgress" Command="{Binding ShowProgressCommand}" ToolTip="Mostrar Progresso da Pasta">
                         <Image Source="pack://application:,,,/Resources/progress.png" Stretch="Uniform"/>
                     </Button>
 
                 </StackPanel>
 
-                <Button Grid.Row="1" Command="{Binding OpenConfigCommand}" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Grid.Row="1" Command="{Binding OpenConfigCommand}" HorizontalAlignment="Center" Margin="0,10,0,0" ToolTip="Abrir Configurações">
                     <Image Source="pack://application:,,,/Resources/settings.png" Stretch="Uniform"/>
                 </Button>
             </Grid>
@@ -114,70 +117,96 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TreeView x:Name="treeModules"
-                    Grid.Column="1"
-                    ItemsSource="{Binding TreeRoot}"
-                    Background="{StaticResource TransparentBrush}"
-                    BorderThickness="0"
-                    Margin="0"
-                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                    helpers:TreeViewExtensions.BindableSelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                    helpers:TreeViewExtensions.IsMonitoringSelectedItem="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="0">
+                        <Button Command="{Binding MarkSelectedCommand}" CommandParameter="{Binding ElementName=treeModules, Path=(helpers:MultiSelectTreeViewBehavior.SelectedItems)}" Margin="5" ToolTip="Marcar Selecionados">
+                            <Image Source="pack://application:,,,/Resources/check_box.png" Stretch="Uniform"/>
+                        </Button>
+                        <Button Command="{Binding UnmarkSelectedCommand}" CommandParameter="{Binding ElementName=treeModules, Path=(helpers:MultiSelectTreeViewBehavior.SelectedItems)}" Margin="5" ToolTip="Desmarcar Selecionados">
+                            <Image Source="pack://application:,,,/Resources/unchecked.png" Stretch="Uniform"/>
+                        </Button>
+                    </StackPanel>
+                    <TreeView x:Name="treeModules"
+                        Grid.Row="1"
+                        ItemsSource="{Binding TreeRoot}"
+                        Background="{StaticResource TransparentBrush}"
+                        BorderThickness="0"
+                        Margin="0"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        helpers:TreeViewExtensions.BindableSelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                        helpers:TreeViewExtensions.IsMonitoringSelectedItem="True"
+                        helpers:MultiSelectTreeViewBehavior.IsMultiSelectEnabled="True"
+                        helpers:MultiSelectTreeViewBehavior.SelectedItems="{Binding SelectedItems}">
 
-                    <TreeView.Resources>
+                        <TreeView.Resources>
 
-                        <Style TargetType="{x:Type TreeViewItem}">
-                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
 
-                            <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
+                                <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
 
-                            <Setter Property="Background" Value="{Binding
-                                RelativeSource={RelativeSource Self},
-                                Converter={StaticResource ZebraConverter}}" />
+                                <Setter Property="Background" Value="{Binding
+                                    RelativeSource={RelativeSource Self},
+                                    Converter={StaticResource ZebraConverter}}" />
 
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Padding" Value="2,4,2,4"/>
+                                <Setter Property="BorderThickness" Value="0" />
+                                <Setter Property="Padding" Value="2,4,2,4"/>
 
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource AccentColor}" />
-                                    <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
-                                </Trigger>
-                                <MultiTrigger>
-                                    <MultiTrigger.Conditions>
-                                        <Condition Property="IsSelected" Value="True"/>
-                                        <Condition Property="IsSelectionActive" Value="False"/>
-                                    </MultiTrigger.Conditions>
-                                    <Setter Property="Background" Value="{StaticResource AlternateRowBrush2}"/>
-                                    <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
-                                </MultiTrigger>
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu x:Name="treeViewItemContextMenu">
+                                            <MenuItem Header="Play"
+                                                      Command="{Binding Source={StaticResource DataContextProxy}, Path=DataContext.PlaySelectedItemCommand}"
+                                                      CommandParameter="{Binding}"/>
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
 
-                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=HasItems}" Value="True">
-                                    <Setter Property="helpers:TreeViewItemHelper.ExpanderForeground" Value="{StaticResource ForegroundColor}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
+                                <Style.Triggers>
+                                    <Trigger Property="helpers:MultiSelectTreeViewBehavior.IsItemSelected" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource AccentColor}" />
+                                        <Setter Property="Foreground" Value="{StaticResource ForegroundColor}" />
+                                    </Trigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="helpers:MultiSelectTreeViewBehavior.IsItemSelected" Value="True"/>
+                                            <Condition Property="IsSelectionActive" Value="False"/>
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" Value="{StaticResource AlternateRowBrush2}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
+                                    </MultiTrigger>
+
+                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=HasItems}" Value="True">
+                                        <Setter Property="helpers:TreeViewItemHelper.ExpanderForeground" Value="{StaticResource ForegroundColor}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
 
 
-                        <HierarchicalDataTemplate DataType="{x:Type models:FolderItem}"
-                                                 ItemsSource="{Binding Children}">
-                            <StackPanel Orientation="Horizontal">
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                <Image Source="pack://application:,,,/Resources/folder.png" Width="16" Height="16" Margin="0,0,5,0" />
-                                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </HierarchicalDataTemplate>
+                            <HierarchicalDataTemplate DataType="{x:Type models:FolderItem}"
+                                                     ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <Image Source="pack://application:,,,/Resources/folder.png" Width="16" Height="16" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
 
-                        <DataTemplate DataType="{x:Type models:VideoItem}">
-                            <StackPanel Orientation="Horizontal">
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                <Image Source="pack://application:,,,/Resources/video.png" Width="14" Height="14" Margin="0,0,5,0" />
-                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </DataTemplate>
+                            <DataTemplate DataType="{x:Type models:VideoItem}">
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <Image Source="pack://application:,,,/Resources/video.png" Width="14" Height="14" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
 
-                    </TreeView.Resources>
-                </TreeView>
+                        </TreeView.Resources>
+                    </TreeView>
+                </Grid>
 
             </Border>
         </Grid>

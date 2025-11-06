@@ -136,6 +136,8 @@ namespace GerenciadorAulas.ViewModels
             set { _isDragging = value; OnPropertyChanged(nameof(IsDragging)); }
         }
 
+        public ObservableCollection<object> SelectedItems { get; } = new ObservableCollection<object>();
+
         // Propriedades para o StackPanel do topo (stubs)
         public int TotalFolders => TreeRoot.OfType<FolderItem>().Count();
         public int TotalVideos => TreeRoot.SelectMany(_treeViewDataService.GetAllVideosRecursive).Count();
@@ -154,6 +156,8 @@ namespace GerenciadorAulas.ViewModels
         public RelayCommand<object?> OpenConfigCommand { get; }
         public RelayCommand<object?> BrowseFoldersCommand { get; }
         public RelayCommand<object?> ShowProgressCommand { get; }
+        public RelayCommand<IEnumerable<object?>?> MarkSelectedCommand { get; }
+        public RelayCommand<IEnumerable<object?>?> UnmarkSelectedCommand { get; }
 
         // ----------------------------------------------------
         // CONSTRUTORES
@@ -281,6 +285,44 @@ namespace GerenciadorAulas.ViewModels
             {
                 LogService.Log("Comando 'Mostrar Progresso' acionado.");
                 _windowManager.ShowFolderProgressWindow(this);
+            });
+
+            MarkSelectedCommand = new RelayCommand<IEnumerable<object?>?>(selectedItems =>
+            {
+                LogService.Log("Comando 'Marcar Selecionados' acionado.");
+                if (selectedItems == null) return;
+
+                foreach (var item in selectedItems)
+                {
+                    if (item is VideoItem video)
+                    {
+                        video.IsChecked = true;
+                    }
+                    else if (item is FolderItem folder)
+                    {
+                        folder.IsChecked = true;
+                    }
+                }
+                AtualizarProgresso();
+            });
+
+            UnmarkSelectedCommand = new RelayCommand<IEnumerable<object?>?>(selectedItems =>
+            {
+                LogService.Log("Comando 'Desmarcar Selecionados' acionado.");
+                if (selectedItems == null) return;
+
+                foreach (var item in selectedItems)
+                {
+                    if (item is VideoItem video)
+                    {
+                        video.IsChecked = false;
+                    }
+                    else if (item is FolderItem folder)
+                    {
+                        folder.IsChecked = false;
+                    }
+                }
+                AtualizarProgresso();
             });
 
             AtualizarProgresso();

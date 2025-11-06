@@ -16,6 +16,7 @@ namespace GerenciadorAulas.Views
             // Carregar valores atuais
             chkReproducaoContinua.IsChecked = _config.ReproducaoContinua;
             chkFullscreenMPV.IsChecked = _config.MPVFullscreen;
+            chkMinimizeToTray.IsChecked = _config.MinimizeToTray;
             txtMPVPath.Text = _config.MPVPath;
         }
 
@@ -36,6 +37,7 @@ namespace GerenciadorAulas.Views
         {
             _config.ReproducaoContinua = chkReproducaoContinua.IsChecked ?? true;
             _config.MPVFullscreen = chkFullscreenMPV.IsChecked ?? true;
+            _config.MinimizeToTray = chkMinimizeToTray.IsChecked ?? false;
             _config.MPVPath = txtMPVPath.Text;
 
             ConfigManager.Salvar(_config);
