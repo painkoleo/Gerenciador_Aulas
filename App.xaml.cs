@@ -54,6 +54,8 @@ namespace GerenciadorAulas
                 // Define o diretório para os logs na pasta local do projeto
                 string logDirectory = ConfigManager.Carregar().LogDirectory;
 
+                System.Diagnostics.Debug.WriteLine($"LogDirectory: {logDirectory}"); // Adicionado para depuração
+
                 // Inicializa o serviço de log
                 LogService.Initialize(logDirectory);
                 LogService.Log("Aplicação iniciada.");

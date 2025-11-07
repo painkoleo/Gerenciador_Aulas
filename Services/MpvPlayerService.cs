@@ -1,3 +1,4 @@
+using GerenciadorAulas.Exceptions;
 using GerenciadorAulas.Models;
 using System;
 using System.Diagnostics;
@@ -49,9 +50,7 @@ namespace GerenciadorAulas.Services
             var configuracoes = _configuracoesProvider();
             if (!IsMpvPathValid(configuracoes.MPVPath))
             {
-                _windowManager.ShowMessageBox("O caminho para o executável do MPV não foi configurado ou é inválido. Por favor, configure-o agora.");
-                _windowManager.ShowConfigWindow(configuracoes);
-                if (!IsMpvPathValid(configuracoes.MPVPath)) return;
+                throw new MpvPathNotConfiguredException("O caminho para o executável do MPV não foi configurado ou é inválido.");
             }
 
             Stop(); // Para qualquer reprodução anterior

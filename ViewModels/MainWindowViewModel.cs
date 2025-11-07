@@ -9,8 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using GerenciadorAulas.Commands;
+using GerenciadorAulas.Exceptions;
 using GerenciadorAulas.Models;
-using GerenciadorAulas.Services; // Dependência!
+using GerenciadorAulas.Services;
 
 namespace GerenciadorAulas.ViewModels
 {
@@ -158,6 +159,8 @@ namespace GerenciadorAulas.ViewModels
         public RelayCommand<object?> ShowProgressCommand { get; }
         public RelayCommand<IEnumerable<object?>?> MarkSelectedCommand { get; }
         public RelayCommand<IEnumerable<object?>?> UnmarkSelectedCommand { get; }
+        public RelayCommand<object?> BackupCommand { get; }
+        public RelayCommand<object?> RestoreCommand { get; }
 
         // ----------------------------------------------------
         // CONSTRUTORES
@@ -190,10 +193,19 @@ namespace GerenciadorAulas.ViewModels
                 {
                     LogService.Log($"Comando 'Reproduzir Vídeo' acionado para: {video.FullPath}");
                     IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
-                    await _mediaPlayerService.PlayAsync(video);
-                    VideoAtual = $"Reproduzindo: {video.Name}";
-                    video.IsChecked = true;
-                    SalvarUltimoVideo(video.FullPath);
+                    try
+                    {
+                        await _mediaPlayerService.PlayAsync(video);
+                        VideoAtual = $"Reproduzindo: {video.Name}";
+                        video.IsChecked = true;
+                        SalvarUltimoVideo(video.FullPath);
+                    }
+                    catch (MpvPathNotConfiguredException ex)
+                    {
+                        LogService.LogWarning(ex.Message);
+                        _windowManager.ShowMessageBox(ex.Message + "\nPor favor, configure-o agora.");
+                        _windowManager.ShowConfigWindow(Configuracoes, this);
+                    }
                 }
                 else
                 {
@@ -263,7 +275,7 @@ namespace GerenciadorAulas.ViewModels
             OpenConfigCommand = new RelayCommand<object?>(_ =>
             {
                 LogService.Log("Comando 'Abrir Configurações' acionado.");
-                _windowManager.ShowConfigWindow(Configuracoes);
+                _windowManager.ShowConfigWindow(Configuracoes, this);
             });
 
             BrowseFoldersCommand = new RelayCommand<object?>(async _ =>
@@ -325,7 +337,61 @@ namespace GerenciadorAulas.ViewModels
                 AtualizarProgresso();
             });
 
+            BackupCommand = new RelayCommand<object?>(_ => BackupData());
+            RestoreCommand = new RelayCommand<object?>(_ => RestoreData());
+
             AtualizarProgresso();
+        }
+
+        // ----------------------------------------------------
+        // 🔹 BACKUP E RESTAURAÇÃO
+        // ----------------------------------------------------
+
+        private void BackupData()
+        {
+            try
+            {
+                string defaultFileName = $"backup-aulas-{DateTime.Now:yyyy-MM-dd}.zip";
+                string? destinationPath = _windowManager.SaveFileDialog(defaultFileName, "Arquivo Zip (*.zip)|*.zip");
+
+                if (!string.IsNullOrEmpty(destinationPath))
+                {
+                    _persistenceService.BackupData(destinationPath);
+                    _windowManager.ShowMessageBox("Backup criado com sucesso!");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError("Falha ao criar backup.", ex);
+                _windowManager.ShowMessageBox($"Ocorreu um erro ao criar o backup: {ex.Message}");
+            }
+        }
+
+        private void RestoreData()
+        {
+            try
+            {
+                if (_windowManager.ShowConfirmationDialog("Restaurar um backup substituirá todos os dados atuais (listas de pastas e vídeos assistidos).\n\nDeseja continuar?"))
+                {
+                    string? sourcePath = _windowManager.OpenFileDialog("Arquivo Zip (*.zip)|*.zip");
+
+                    if (!string.IsNullOrEmpty(sourcePath))
+                    {
+                        _persistenceService.RestoreData(sourcePath);
+
+                        // Recarregar dados
+                        _treeViewDataService.LoadInitialTree();
+                        AtualizarProgresso();
+
+                        _windowManager.ShowMessageBox("Backup restaurado com sucesso!");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError("Falha ao restaurar backup.", ex);
+                _windowManager.ShowMessageBox($"Ocorreu um erro ao restaurar o backup: {ex.Message}");
+            }
         }
 
         // ----------------------------------------------------
@@ -427,7 +493,18 @@ namespace GerenciadorAulas.ViewModels
                 LogService.Log($"Reproduzindo vídeo: {video.FullPath}");
                 VideoAtual = $"Reproduzindo: {video.Name}";
 
-                await _mediaPlayerService.PlayAsync(video);
+                try
+                {
+                    await _mediaPlayerService.PlayAsync(video);
+                }
+                catch (MpvPathNotConfiguredException ex)
+                {
+                    LogService.LogWarning(ex.Message);
+                    _windowManager.ShowMessageBox(ex.Message + "\nPor favor, configure-o agora.");
+                    _windowManager.ShowConfigWindow(Configuracoes, this);
+                    IsManuallyStopped = true; // Stop further playback attempts
+                    break; // Exit the loop
+                }
 
                 // Marca como assistido e salva o último vídeo
                 video.IsChecked = true;

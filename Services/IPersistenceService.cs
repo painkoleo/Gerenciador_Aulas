@@ -9,6 +9,8 @@ namespace GerenciadorAulas.Services
         TreeViewEstado LoadTreeViewEstado();
         void SaveTreeViewEstado(TreeViewEstado treeViewEstado);
         void SaveLastPlayedVideo(string videoPath);
+        void BackupData(string destinationFilePath);
+        void RestoreData(string sourceFilePath);
     }
 
     public class StubPersistenceService : IPersistenceService
@@ -18,6 +20,8 @@ namespace GerenciadorAulas.Services
         public TreeViewEstado LoadTreeViewEstado() => new TreeViewEstado();
         public void SaveTreeViewEstado(TreeViewEstado treeViewEstado) { }
         public void SaveLastPlayedVideo(string videoPath) { }
+        public void BackupData(string destinationFilePath) { }
+        public void RestoreData(string sourceFilePath) { }
     }
 
     public class TreeViewEstado

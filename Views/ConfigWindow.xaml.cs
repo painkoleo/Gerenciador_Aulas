@@ -1,6 +1,7 @@
 using System.Windows;
 using Ookii.Dialogs.Wpf;
 using GerenciadorAulas;
+using GerenciadorAulas.ViewModels;
 
 namespace GerenciadorAulas.Views
 {
@@ -8,9 +9,10 @@ namespace GerenciadorAulas.Views
     {
         private Configuracoes _config;
 
-        public ConfigWindow(Configuracoes config)
+        public ConfigWindow(Configuracoes config, MainWindowViewModel viewModel)
         {
             InitializeComponent();
+            this.DataContext = viewModel;
             _config = config;
 
             // Carregar valores atuais

@@ -10,6 +10,7 @@
     * [2.3. Controles de Reprodução](#23-controles-de-reprodução)
     * [2.4. Configurações (Player MPV)](#24-configurações-player-mpv)
     * [2.5. Funcionalidades Adicionais](#25-funcionalidades-adicionais)
+    * [2.6. Backup e Restauração de Dados](#26-backup-e-restauração-de-dados)
 3. [Arquitetura do Sistema (MVVM)](#3-arquitetura-do-sistema-mvvm)
     * [3.1. Componentes Principais](#31-componentes-principais)
 4. [Detalhes do ViewModel (`MainWindowViewModel.cs`)](#4-detalhes-do-viewmodel-mainwindowviewmodelcs)
@@ -109,6 +110,15 @@ Ao clicar com o botão direito no ícone do Gerenciador de Aulas na bandeja do s
 *   **Fechar:** Encerra completamente a aplicação.
 
 Um duplo clique no ícone da bandeja também restaura a janela principal.
+
+### 2.6. Backup e Restauração de Dados
+
+Para garantir a segurança dos seus dados de progresso, a aplicação agora conta com uma funcionalidade de backup e restauração.
+
+1.  **Acesse a Janela de Configurações:** Clique no ícone de engrenagem para abrir as configurações.
+2.  **Use os Botões de Backup:**
+    *   **Fazer Backup:** Ao clicar neste botão, o sistema irá gerar um único arquivo `.zip` contendo todos os dados da aplicação (vídeos assistidos, estado das pastas, último vídeo reproduzido). Você poderá escolher onde salvar este arquivo.
+    *   **Restaurar Backup:** Ao clicar, você poderá selecionar um arquivo de backup (`.zip`) previamente salvo. **Atenção:** A restauração substituirá todos os dados atuais da aplicação pelos dados contidos no backup. Uma caixa de diálogo de confirmação será exibida antes da operação.
 
 ---
 

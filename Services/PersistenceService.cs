@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 
@@ -93,6 +94,50 @@ namespace GerenciadorAulas.Services
             catch (Exception ex)
             {
                 LogService.LogError($"Erro ao salvar último vídeo reproduzido: {ex.Message}", ex);
+            }
+        }
+
+        public void BackupData(string destinationFilePath)
+        {
+            try
+            {
+                if (File.Exists(destinationFilePath))
+                {
+                    File.Delete(destinationFilePath);
+                }
+
+                using (var zip = ZipFile.Open(destinationFilePath, ZipArchiveMode.Create))
+                {
+                    if (File.Exists(estadoArquivo))
+                        zip.CreateEntryFromFile(estadoArquivo, Path.GetFileName(estadoArquivo));
+                    if (File.Exists(ultimoVideoArquivo))
+                        zip.CreateEntryFromFile(ultimoVideoArquivo, Path.GetFileName(ultimoVideoArquivo));
+                    if (File.Exists(estadoTreeArquivo))
+                        zip.CreateEntryFromFile(estadoTreeArquivo, Path.GetFileName(estadoTreeArquivo));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError($"Erro ao criar backup: {ex.Message}", ex);
+                throw;
+            }
+        }
+
+        public void RestoreData(string sourceFilePath)
+        {
+            try
+            {
+                if (!File.Exists(sourceFilePath))
+                {
+                    throw new FileNotFoundException("Arquivo de backup não encontrado.", sourceFilePath);
+                }
+
+                ZipFile.ExtractToDirectory(sourceFilePath, appDataDir, true);
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError($"Erro ao restaurar backup: {ex.Message}", ex);
+                throw;
             }
         }
     }
