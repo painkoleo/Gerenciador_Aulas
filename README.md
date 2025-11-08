@@ -9,7 +9,7 @@
     * [2.1. Adicionar Aulas](#21-adicionar-aulas)
     * [2.2. Rastreamento de Progresso](#22-rastreamento-de-progresso)
     * [2.3. Controles de Reprodução](#23-controles-de-reprodução)
-    * [2.4. Configurações (Player MPV)](#24-configurações-player-mpv)
+    * [2.4. Configurações](#24-configurações)
     * [2.5. Funcionalidades Adicionais](#25-funcionalidades-adicionais)
     * [2.6. Backup e Restauração de Dados](#26-backup-e-restauração-de-dados)
 3. [Arquitetura do Sistema (MVVM)](#3-arquitetura-do-sistema-mvvm)
@@ -116,14 +116,15 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 
 * **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
 
-### 2.4. Configurações (Player MPV)
+### 2.4. Configurações
 
-É essencial configurar o caminho do player MPV para que a reprodução funcione:
+A janela de configurações, acessada pelo ícone de engrenagem na barra de ferramentas, é organizada em abas.
 
-1.  Clique no botão de **Configurações** (engrenagem) na barra de ferramentas.
-2.  Defina o **Caminho do Executável MPV**: Indique o local do arquivo `mpv.exe` na sua máquina.
-3.  **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente após o término do vídeo atual.
-4.  **Tela Cheia (Fullscreen):** Marque para que o MPV sempre inicie em modo tela cheia.
+1.  **Aba "Geral":**
+    *   **Caminho do Executável MPV:** É essencial definir o local do arquivo `mpv.exe` para que a reprodução de vídeo funcione.
+    *   **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente.
+    *   **Tela Cheia (Fullscreen):** Marque para que o MPV sempre inicie em modo tela cheia.
+    *   **Minimizar para Bandeja:** Altera o comportamento do botão de fechar para minimizar a aplicação para a bandeja do sistema.
 
 ### 2.5. Funcionalidades Adicionais
 
@@ -149,16 +150,16 @@ Um duplo clique no ícone da bandeja também restaura a janela principal.
 
 ### 2.6. Backup e Restauração de Dados
 
-Para garantir a segurança dos seus dados de progresso, a aplicação agora conta com uma funcionalidade de backup e restauração.
+Para garantir a segurança dos seus dados de progresso, a aplicação conta com uma funcionalidade de backup e restauração, acessível através da janela de **Configurações**.
 
 1.  **Backup e Restauração na Nuvem (Google Drive):**
+    *   Acesse a aba **Backup** na janela de configurações.
     *   **Salvar no Google Drive:** Cria um backup dos dados da aplicação e o envia para uma pasta dedicada no seu Google Drive (`GerenciadorDeAulas_Backups`).
     *   **Restaurar do Google Drive:** Permite selecionar um backup previamente salvo no Google Drive e restaurá-lo para a aplicação. **Atenção:** A restauração substituirá todos os dados atuais da aplicação.
 2.  **Backup Local:**
-    *   **Acesse a Janela de Configurações:** Clique no ícone de engrenagem para abrir as configurações.
-    *   **Use os Botões de Backup:**
-        *   **Fazer Backup:** Ao clicar neste botão, o sistema irá gerar um único arquivo `.zip` contendo todos os dados da aplicação (vídeos assistidos, estado das pastas, último vídeo reproduzido). Você poderá escolher onde salvar este arquivo.
-        *   **Restaurar Backup:** Ao clicar, você poderá selecionar um arquivo de backup (`.zip`) previamente salvo. **Atenção:** A restauração substituirá todos os dados atuais da aplicação pelos dados contidos no backup. Uma caixa de diálogo de confirmação será exibida antes da operação.
+    *   Acesse a aba **Backup** na janela de configurações.
+    *   **Fazer Backup Local:** Ao clicar neste botão, o sistema irá gerar um único arquivo `.zip` contendo todos os dados da aplicação (vídeos assistidos, estado das pastas, último vídeo reproduzido). Você poderá escolher onde salvar este arquivo.
+    *   **Restaurar Backup Local:** Ao clicar, você poderá selecionar um arquivo de backup (`.zip`) previamente salvo. **Atenção:** A restauração substituirá todos os dados atuais da aplicação pelos dados contidos no backup. Uma caixa de diálogo de confirmação será exibida antes da operação.
 
 ---
 

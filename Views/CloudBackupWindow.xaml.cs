@@ -16,7 +16,7 @@ namespace GerenciadorAulas.Views
             // Carrega os backups quando a janela é aberta
             this.Loaded += async (sender, e) =>
             {
-                _viewModel.LoadBackupsCommand.Execute(null);
+                await _viewModel.LoadBackupsCommand.ExecuteAsync(null);
             };
         }
 
