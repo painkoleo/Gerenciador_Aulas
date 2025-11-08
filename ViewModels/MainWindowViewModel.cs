@@ -82,6 +82,7 @@ namespace GerenciadorAulas.ViewModels
         private readonly IPersistenceService _persistenceService;
         private readonly IMediaPlayerService _mediaPlayerService;
         private readonly ITreeViewDataService _treeViewDataService;
+        private readonly ICloudStorageService _cloudStorageService;
 
 
         // ----------------------------------------------------
@@ -161,23 +162,26 @@ namespace GerenciadorAulas.ViewModels
         public RelayCommand<IEnumerable<object?>?> UnmarkSelectedCommand { get; }
         public RelayCommand<object?> BackupCommand { get; }
         public RelayCommand<object?> RestoreCommand { get; }
+        public AsyncRelayCommand<object?> BackupToCloudCommand { get; }
+        public AsyncRelayCommand RestoreFromCloudCommand { get; }
 
         // ----------------------------------------------------
         // CONSTRUTORES
         // ----------------------------------------------------
 
-        public MainWindowViewModel() : this(new StubWindowManager(), new StubPersistenceService(), new StubMediaPlayerService(), new StubTreeViewDataService())
+        public MainWindowViewModel() : this(new StubWindowManager(), new StubPersistenceService(), new StubMediaPlayerService(), new StubTreeViewDataService(), new StubCloudStorageService())
         {
             // Construtor de Design-Time
         }
 
-        public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService, IMediaPlayerService mediaPlayerService, ITreeViewDataService treeViewDataService)
+        public MainWindowViewModel(IWindowManager windowManager, IPersistenceService persistenceService, IMediaPlayerService mediaPlayerService, ITreeViewDataService treeViewDataService, ICloudStorageService cloudStorageService)
         {
             LogService.Log("MainWindowViewModel inicializado.");
             _windowManager = windowManager;
             _persistenceService = persistenceService;
             _mediaPlayerService = mediaPlayerService;
             _treeViewDataService = treeViewDataService;
+            _cloudStorageService = cloudStorageService;
 
 
 
@@ -340,12 +344,92 @@ namespace GerenciadorAulas.ViewModels
             BackupCommand = new RelayCommand<object?>(_ => BackupData());
             RestoreCommand = new RelayCommand<object?>(_ => RestoreData());
 
+            BackupToCloudCommand = new AsyncRelayCommand<object?>(BackupToCloudAsync);
+            RestoreFromCloudCommand = new AsyncRelayCommand(RestoreFromCloudAsync);
+
             AtualizarProgresso();
         }
 
         // ----------------------------------------------------
         // 🔹 BACKUP E RESTAURAÇÃO
         // ----------------------------------------------------
+
+        private async Task RestoreFromCloudAsync()
+        {
+            IsLoading = true;
+            string tempDownloadPath = Path.Combine(Path.GetTempPath(), $"restore-temp-{Guid.NewGuid()}.zip");
+            try
+            {
+                if (_windowManager.ShowConfirmationDialog("Restaurar um backup da nuvem substituirá todos os dados atuais (listas de pastas e vídeos assistidos).\n\nDeseja continuar?"))
+                {
+                    CloudFile? selectedBackup = _windowManager.ShowCloudBackupWindow();
+
+                    if (selectedBackup != null)
+                    {
+                        // 1. Baixar backup da nuvem
+                        await _cloudStorageService.DownloadBackupAsync(selectedBackup.Id, tempDownloadPath);
+
+                        // 2. Restaurar dados locais
+                        _persistenceService.RestoreData(tempDownloadPath);
+
+                        // 3. Recarregar dados da aplicação
+                        _treeViewDataService.LoadInitialTree();
+                        AtualizarProgresso();
+
+                        _windowManager.ShowMessageBox($"Backup '{selectedBackup.Name}' restaurado com sucesso!");
+                    }
+                    else
+                    {
+                        _windowManager.ShowMessageBox("Nenhum backup selecionado para restauração.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError("Falha ao restaurar backup da nuvem.", ex);
+                _windowManager.ShowMessageBox($"Ocorreu um erro ao restaurar o backup da nuvem: {ex.Message}");
+            }
+            finally
+            {
+                // 4. Limpar arquivo temporário
+                if (File.Exists(tempDownloadPath))
+                {
+                    File.Delete(tempDownloadPath);
+                }
+                IsLoading = false;
+            }
+        }
+
+        private async Task BackupToCloudAsync(object? _)
+        {
+            IsLoading = true;
+            string tempBackupPath = Path.Combine(Path.GetTempPath(), $"backup-temp-{Guid.NewGuid()}.zip");
+            try
+            {
+                // 1. Criar backup local temporário
+                _persistenceService.BackupData(tempBackupPath);
+
+                // 2. Fazer upload para a nuvem
+                string fileName = $"backup-aulas-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.zip";
+                await _cloudStorageService.UploadBackupAsync(tempBackupPath, fileName);
+
+                _windowManager.ShowMessageBox("Backup enviado para o Google Drive com sucesso!");
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError("Falha ao fazer backup para a nuvem.", ex);
+                _windowManager.ShowMessageBox($"Ocorreu um erro ao enviar o backup para a nuvem: {ex.Message}");
+            }
+            finally
+            {
+                // 3. Limpar arquivo temporário
+                if (File.Exists(tempBackupPath))
+                {
+                    File.Delete(tempBackupPath);
+                }
+                IsLoading = false;
+            }
+        }
 
         private void BackupData()
         {

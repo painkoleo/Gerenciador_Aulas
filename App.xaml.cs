@@ -23,7 +23,7 @@ namespace GerenciadorAulas
         private void ConfigureServices(IServiceCollection services)
         {
             // Register services
-            services.AddSingleton<IWindowManager, WindowManager>();
+            services.AddSingleton<IWindowManager>(provider => new WindowManager(provider));
             services.AddSingleton<IPersistenceService, PersistenceService>();
             services.AddSingleton<IMediaPlayerService>(provider =>
                 MpvPlayerService.GetInstance(
@@ -37,12 +37,15 @@ namespace GerenciadorAulas
                     provider.GetRequiredService<IPersistenceService>(),
                     () => ConfigManager.Carregar() // Fornece a implementação para Func<Configuracoes>
                 ));
+            services.AddSingleton<ICloudStorageService, GoogleDriveService>();
 
             // Register ViewModels
             services.AddTransient<MainWindowViewModel>();
+            services.AddTransient<CloudBackupViewModel>();
 
             // Register Windows
             services.AddTransient<MainWindow>();
+            services.AddTransient<CloudBackupWindow>();
         }
 
         protected override void OnStartup(StartupEventArgs e)

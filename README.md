@@ -4,6 +4,7 @@
 
 1. [Visão Geral do Sistema](#1-visão-geral-do-sistema)
     * [1.1. Tecnologias e Padrões](#11-tecnologias-e-padrões)
+    * [1.2. Guia de Instalação e Desenvolvimento](#12-guia-de-instalação-e-desenvolvimento)
 2. [Guia do Usuário: Como Usar o Gerenciador de Aulas](#2-guia-do-usuário-como-usar-o-gerenciador-de-aulas)
     * [2.1. Adicionar Aulas](#21-adicionar-aulas)
     * [2.2. Rastreamento de Progresso](#22-rastreamento-de-progresso)
@@ -41,9 +42,44 @@ O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo
 * **Framework:** WPF (.NET)
 * **Padrão de Design:** MVVM (Model-View-ViewModel)
 * **Injeção de Dependência:** Utilização extensiva para desacoplamento e testabilidade.
-* **Persistência de Dados:** Serialização JSON (Newtonsoft.Json)
+* **Persistência de Dados:** Serialização JSON (Newtonsoft.Json), Backup na nuvem via Google Drive API (OAuth2)
 * **Mídia:** Reprodução via serviço abstrato (`IMediaPlayerService`), com implementação padrão usando processo externo (`mpv.exe`).
 * **Comandos Assíncronos:** Implementação de `AsyncRelayCommand` para operações não bloqueantes na UI.
+
+---
+
+## 1.2. Guia de Instalação e Desenvolvimento
+
+Para configurar o ambiente de desenvolvimento e executar o projeto, siga os passos abaixo:
+
+### Pré-requisitos
+
+*   **Visual Studio:** Recomenda-se o Visual Studio 2022 ou superior com a carga de trabalho ".NET desktop development" instalada.
+*   **SDK do .NET:** Certifique-se de ter o SDK do .NET 6.0 ou superior instalado.
+*   **Git:** Para clonar o repositório.
+
+### Configuração do Ambiente
+
+1.  **Clonar o Repositório:**
+    ```bash
+    git clone https://github.com/seu-usuario/Gerenciador_Aulas.git
+    cd Gerenciador_Aulas/Gerenciador_Aulas
+    ```
+    (Substitua `https://github.com/seu-usuario/Gerenciador_Aulas.git` pelo URL real do repositório, se diferente).
+
+    > **Nota sobre `client_secret.json`:** Para a funcionalidade de backup no Google Drive, é necessário um arquivo `client_secret.json`. Este arquivo contém credenciais sensíveis e **não deve ser versionado em repositórios públicos**. Para desenvolvimento local, você precisará criar seu próprio projeto no Google Cloud Console, habilitar a Google Drive API e baixar seu `client_secret.json`, colocando-o na raiz do projeto.
+
+2.  **Abrir no Visual Studio:**
+    *   Abra o arquivo de solução `GerenciadorAulas.sln` no Visual Studio.
+
+3.  **Restaurar Pacotes NuGet:**
+    *   O Visual Studio deve restaurar automaticamente os pacotes NuGet. Caso contrário, clique com o botão direito na solução no "Gerenciador de Soluções" e selecione "Restaurar Pacotes NuGet".
+
+4.  **Compilar o Projeto:**
+    *   No Visual Studio, vá em `Build > Build Solution` (ou pressione `Ctrl+Shift+B`).
+
+5.  **Executar a Aplicação:**
+    *   Pressione `F5` no Visual Studio para iniciar a aplicação em modo de depuração, ou `Ctrl+F5` para iniciar sem depurar.
 
 ---
 
@@ -115,10 +151,14 @@ Um duplo clique no ícone da bandeja também restaura a janela principal.
 
 Para garantir a segurança dos seus dados de progresso, a aplicação agora conta com uma funcionalidade de backup e restauração.
 
-1.  **Acesse a Janela de Configurações:** Clique no ícone de engrenagem para abrir as configurações.
-2.  **Use os Botões de Backup:**
-    *   **Fazer Backup:** Ao clicar neste botão, o sistema irá gerar um único arquivo `.zip` contendo todos os dados da aplicação (vídeos assistidos, estado das pastas, último vídeo reproduzido). Você poderá escolher onde salvar este arquivo.
-    *   **Restaurar Backup:** Ao clicar, você poderá selecionar um arquivo de backup (`.zip`) previamente salvo. **Atenção:** A restauração substituirá todos os dados atuais da aplicação pelos dados contidos no backup. Uma caixa de diálogo de confirmação será exibida antes da operação.
+1.  **Backup e Restauração na Nuvem (Google Drive):**
+    *   **Salvar no Google Drive:** Cria um backup dos dados da aplicação e o envia para uma pasta dedicada no seu Google Drive (`GerenciadorDeAulas_Backups`).
+    *   **Restaurar do Google Drive:** Permite selecionar um backup previamente salvo no Google Drive e restaurá-lo para a aplicação. **Atenção:** A restauração substituirá todos os dados atuais da aplicação.
+2.  **Backup Local:**
+    *   **Acesse a Janela de Configurações:** Clique no ícone de engrenagem para abrir as configurações.
+    *   **Use os Botões de Backup:**
+        *   **Fazer Backup:** Ao clicar neste botão, o sistema irá gerar um único arquivo `.zip` contendo todos os dados da aplicação (vídeos assistidos, estado das pastas, último vídeo reproduzido). Você poderá escolher onde salvar este arquivo.
+        *   **Restaurar Backup:** Ao clicar, você poderá selecionar um arquivo de backup (`.zip`) previamente salvo. **Atenção:** A restauração substituirá todos os dados atuais da aplicação pelos dados contidos no backup. Uma caixa de diálogo de confirmação será exibida antes da operação.
 
 ---
 
@@ -178,7 +218,7 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 
 ### 4.3. Mecanismo de Reprodução de Mídia (via `IMediaPlayerService`)
 
-A reprodução de mídia agora é abstraída através da interface `IMediaPlayerService`, que é injetada no `MainWindowViewModel`. A implementação padrão, `MpvPlayerService`, utiliza o `mpv.exe` como processo externo.
+A reprodução de 1mídia agora é abstraída através da interface `IMediaPlayerService`, que é injetada no `MainWindowViewModel`. A implementação padrão, `MpvPlayerService`, utiliza o `mpv.exe` como processo externo.
 
 1.  **Abstração:** O ViewModel interage apenas com a interface `IMediaPlayerService`, sem conhecimento dos detalhes de implementação do player.
 2.  **Assincronicidade:** Os métodos de reprodução são assíncronos, garantindo que a UI permaneça responsiva.

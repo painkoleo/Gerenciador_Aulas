@@ -1,17 +1,23 @@
+using System;
 using System.Windows;
 using GerenciadorAulas;
+using GerenciadorAulas.Models;
 using GerenciadorAulas.ViewModels;
 using GerenciadorAulas.Views;
 using Ookii.Dialogs.Wpf;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GerenciadorAulas.Services
 {
     // A implementação concreta e unificada que lida com a UI de janelas/diálogos.
     public class WindowManager : IWindowManager
     {
+        private readonly IServiceProvider _serviceProvider;
+
         // Construtor vazio, não depende mais de uma janela específica.
-        public WindowManager()
+        public WindowManager(IServiceProvider serviceProvider)
         {
+            _serviceProvider = serviceProvider;
         }
 
         public string? OpenFolderDialog()
@@ -86,6 +92,22 @@ namespace GerenciadorAulas.Services
             if (dialog.ShowDialog(Application.Current.MainWindow) == true)
             {
                 return dialog.FileName;
+            }
+            return null;
+        }
+
+        public CloudFile? ShowCloudBackupWindow()
+        {
+            var viewModel = _serviceProvider.GetRequiredService<CloudBackupViewModel>();
+            var window = new CloudBackupWindow(viewModel)
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            bool? result = window.ShowDialog();
+            if (result == true && viewModel.SelectedBackup != null)
+            {
+                return viewModel.SelectedBackup;
             }
             return null;
         }

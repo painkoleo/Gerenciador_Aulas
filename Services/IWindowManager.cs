@@ -1,5 +1,8 @@
-using GerenciadorAulas;
+using GerenciadorAulas.Models;
 using GerenciadorAulas.ViewModels;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace GerenciadorAulas.Services
 {
@@ -13,6 +16,7 @@ namespace GerenciadorAulas.Services
         string? OpenFileDialog(string filter);
         string? SaveFileDialog(string defaultFileName, string filter);
         void ShowFolderProgressWindow(MainWindowViewModel viewModel);
+        CloudFile? ShowCloudBackupWindow();
     }
 
     // Implementação para o design-time
@@ -25,5 +29,6 @@ namespace GerenciadorAulas.Services
         public string? OpenFileDialog(string filter) => null;
         public string? SaveFileDialog(string defaultFileName, string filter) => null;
         public void ShowFolderProgressWindow(MainWindowViewModel viewModel) { }
+        public CloudFile? ShowCloudBackupWindow() => null;
     }
 }

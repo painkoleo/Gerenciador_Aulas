@@ -48,6 +48,8 @@
         <GroupBox Header="Backup e Restauração" Grid.Row="5" Grid.ColumnSpan="2" Margin="0,15,0,0" Foreground="White">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
                 <Button Content="Fazer Backup" Command="{Binding BackupCommand}" Width="120" Margin="5"/>
+                <Button Content="Salvar no Google Drive" Command="{Binding BackupToCloudCommand}" Width="150" Margin="5"/>
+                <Button Content="Restaurar do Google Drive" Command="{Binding RestoreFromCloudCommand}" Width="150" Margin="5"/>
                 <Button Content="Restaurar Backup" Command="{Binding RestoreCommand}" Width="120" Margin="5"/>
             </StackPanel>
         </GroupBox>
