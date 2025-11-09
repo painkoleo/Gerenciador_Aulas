@@ -5,13 +5,84 @@
                           
                           >
     <Application.Resources>
-        <!-- Cores da Aplicação -->
-        <SolidColorBrush x:Key="BackgroundColor" Color="#1e1e1e" />
-        <SolidColorBrush x:Key="ForegroundColor" Color="White" />
-        <SolidColorBrush x:Key="PanelBackgroundColor" Color="#252526" />
-        <SolidColorBrush x:Key="AlternateRowBrush1" Color="#252526" />
-        <SolidColorBrush x:Key="AlternateRowBrush2" Color="#2D2D30" />
-        <SolidColorBrush x:Key="AccentColor" Color="#4A90E2" />
-        <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+        <ResourceDictionary>
+            <!-- Cores da Aplicação -->
+            <SolidColorBrush x:Key="BackgroundColor" Color="#1e1e1e" />
+            <SolidColorBrush x:Key="ForegroundColor" Color="White" />
+            <SolidColorBrush x:Key="PanelBackgroundColor" Color="#252526" />
+            <SolidColorBrush x:Key="AlternateRowBrush1" Color="#252526" />
+            <SolidColorBrush x:Key="AlternateRowBrush2" Color="#2D2D30" />
+            <SolidColorBrush x:Key="AccentColor" Color="#4A90E2" />
+            <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="ButtonHoverColor" Color="#30FFFFFF"/>
+            <SolidColorBrush x:Key="DisabledForegroundColor" Color="#888888"/>
+
+            <!-- Estilo Global para Botões -->
+            <Style TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource AccentColor}"/>
+                <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="10,5"/>
+                <Setter Property="Margin" Value="5"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="3">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource ButtonHoverColor}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#444444"/>
+                                    <Setter Property="Foreground" Value="{StaticResource DisabledForegroundColor}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Estilo para TabControl -->
+            <Style TargetType="TabControl">
+                <Setter Property="Background" Value="{StaticResource BackgroundColor}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+            </Style>
+
+            <!-- Estilo para TabItem -->
+            <Style TargetType="TabItem">
+                <Setter Property="Foreground" Value="{StaticResource ForegroundColor}"/>
+                <Setter Property="Background" Value="{StaticResource PanelBackgroundColor}"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="Margin" Value="0,0,2,0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="TabItem">
+                            <Border x:Name="Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{StaticResource TransparentBrush}"
+                                    BorderThickness="0,0,0,2"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter ContentSource="Header"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource AccentColor}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource AlternateRowBrush2}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

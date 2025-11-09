@@ -15,7 +15,6 @@ namespace GerenciadorAulas.Services
         bool ShowConfirmationDialog(string message);
         string? OpenFileDialog(string filter);
         string? SaveFileDialog(string defaultFileName, string filter);
-        void ShowFolderProgressWindow(MainWindowViewModel viewModel);
         CloudFile? ShowCloudBackupWindow();
     }
 
@@ -28,7 +27,6 @@ namespace GerenciadorAulas.Services
         public bool ShowConfirmationDialog(string message) => false;
         public string? OpenFileDialog(string filter) => null;
         public string? SaveFileDialog(string defaultFileName, string filter) => null;
-        public void ShowFolderProgressWindow(MainWindowViewModel viewModel) { }
         public CloudFile? ShowCloudBackupWindow() => null;
     }
 }

@@ -46,15 +46,6 @@ namespace GerenciadorAulas.Services
             configWindow.ShowDialog();
         }
 
-        public void ShowFolderProgressWindow(MainWindowViewModel viewModel)
-        {
-            var progressWindow = new FolderProgressWindow(viewModel)
-            {
-                Owner = Application.Current.MainWindow
-            };
-            progressWindow.ShowDialog();
-        }
-
         public void ShowMessageBox(string message)
         { 
             MessageBox.Show(Application.Current.MainWindow, message, "Gerenciador de Aulas", MessageBoxButton.OK, MessageBoxImage.Information);

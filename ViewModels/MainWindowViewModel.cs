@@ -157,7 +157,6 @@ namespace GerenciadorAulas.ViewModels
 
         public RelayCommand<object?> OpenConfigCommand { get; }
         public RelayCommand<object?> BrowseFoldersCommand { get; }
-        public RelayCommand<object?> ShowProgressCommand { get; }
         public RelayCommand<IEnumerable<object?>?> MarkSelectedCommand { get; }
         public RelayCommand<IEnumerable<object?>?> UnmarkSelectedCommand { get; }
         public RelayCommand<object?> BackupCommand { get; }
@@ -295,12 +294,6 @@ namespace GerenciadorAulas.ViewModels
                 {
                     LogService.Log("Seleção de pasta cancelada pelo usuário.");
                 }
-            });
-
-            ShowProgressCommand = new RelayCommand<object?>(_ =>
-            {
-                LogService.Log("Comando 'Mostrar Progresso' acionado.");
-                _windowManager.ShowFolderProgressWindow(this);
             });
 
             MarkSelectedCommand = new RelayCommand<IEnumerable<object?>?>(selectedItems =>

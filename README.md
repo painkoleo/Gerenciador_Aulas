@@ -98,11 +98,16 @@ Existem duas maneiras principais de adicionar conteúdo à sua biblioteca:
 
 ### 2.2. Rastreamento de Progresso
 
-O progresso é rastreado através da `TreeView` e da caixa de seleção (checkbox) ao lado de cada item.
+O progresso é rastreado de duas formas principais:
 
-* **Marcar como Assistido:** Clique na **checkbox** ao lado de um vídeo para marcá-lo como assistido. O sistema salva esse estado automaticamente.
-* **Progresso em Pasta:** Quando um vídeo é marcado/desmarcado, o sistema propaga a mudança para a pasta pai, atualizando o progresso exibido no nome da pasta (ex: `Módulo 1 (5/10)`).
-* **Checkbox Indeterminada:** Se uma pasta contém alguns vídeos assistidos e outros não, a checkbox da pasta ficará em um **estado misto (hífen)**.
+1.  **Na Aba "Aulas":**
+    *   **Marcar como Assistido:** Clique na **checkbox** ao lado de um vídeo para marcá-lo como assistido. O sistema salva esse estado automaticamente.
+    *   **Progresso em Pasta:** Quando um vídeo é marcado/desmarcado, o sistema propaga a mudança para a pasta pai, atualizando o progresso exibido no nome da pasta (ex: `Módulo 1 (5/10)`).
+    *   **Checkbox Indeterminada:** Se uma pasta contém alguns vídeos assistidos e outros não, a checkbox da pasta ficará em um **estado misto (hífen)**.
+
+2.  **Na Aba "Progresso":**
+    *   A janela principal agora possui uma aba dedicada chamada **"Progresso"**.
+    *   Esta aba exibe uma lista de todas as pastas raiz adicionadas, cada uma com uma barra de progresso visual que representa a porcentagem de vídeos assistidos naquela pasta. Isso oferece uma visão geral e rápida do andamento em todos os seus cursos.
 
 ### 2.3. Controles de Reprodução
 
@@ -173,7 +178,7 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 | :--- | :--- | :--- |
 | **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
 | **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
-| **View** | `Views/MainWindow.xaml`, `Views/FolderProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
+| **View** | `Views/MainWindow.xaml`, `Views/ConfigWindow.xaml`, `Views/CloudBackupWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
 | **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/IMediaPlayerService.cs`, `Services/ITreeViewDataService.cs`, `Services/LogService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
 
 ### 3.2. Estrutura de Pastas
@@ -262,7 +267,7 @@ O `LogService` é uma classe estática utilizada para centralizar o registro de 
 
 
 
-O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (`ConfigWindow`, `FolderProgressWindow`) e caixas de diálogo do sistema.
+O padrão de Injeção de Dependência é utilizado para gerenciar a abertura de novas janelas (como `ConfigWindow` e `CloudBackupWindow`) e caixas de diálogo do sistema.
 
 
 
