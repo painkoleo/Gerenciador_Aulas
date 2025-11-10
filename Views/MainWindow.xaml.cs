@@ -71,6 +71,17 @@ namespace GerenciadorAulas.Views
             }
             else
             {
+                // Salvar as configurações da janela antes de fechar
+                if (DataContext is MainWindowViewModel viewModel)
+                {
+                    viewModel.Configuracoes.WindowLeft = Left;
+                    viewModel.Configuracoes.WindowTop = Top;
+                    viewModel.Configuracoes.WindowWidth = Width;
+                    viewModel.Configuracoes.WindowHeight = Height;
+                    viewModel.Configuracoes.WindowState = WindowState;
+                    ConfigManager.Salvar(viewModel.Configuracoes);
+                }
+
                 if (_notifyIcon != null)
                 {
                     _notifyIcon.Dispose();
@@ -112,6 +123,23 @@ namespace GerenciadorAulas.Views
             if (DataContext is MainWindowViewModel viewModel)
             {
                 viewModel.IsDragging = false;
+            }
+        }
+
+        private void Slider_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                viewModel.StartSeekCommand.Execute(null);
+            }
+        }
+
+        private void Slider_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                // O comando SeekCommand já é executado via Interaction.Triggers no XAML
+                viewModel.EndSeekCommand.Execute(null);
             }
         }
     }

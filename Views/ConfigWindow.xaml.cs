@@ -17,30 +17,13 @@ namespace GerenciadorAulas.Views
 
             // Carregar valores atuais
             chkReproducaoContinua.IsChecked = _config.ReproducaoContinua;
-            chkFullscreenMPV.IsChecked = _config.MPVFullscreen;
             chkMinimizeToTray.IsChecked = _config.MinimizeToTray;
-            txtMPVPath.Text = _config.MPVPath;
-        }
-
-
-        private void BtnSelecionarMPV_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Executável MPV|mpv.exe",
-                Title = "Selecione o MPV.exe"
-            };
-
-            if (dialog.ShowDialog() == true)
-                txtMPVPath.Text = dialog.FileName;
         }
 
         private void BtnSalvar_Click(object sender, RoutedEventArgs e)
         {
             _config.ReproducaoContinua = chkReproducaoContinua.IsChecked ?? true;
-            _config.MPVFullscreen = chkFullscreenMPV.IsChecked ?? true;
             _config.MinimizeToTray = chkMinimizeToTray.IsChecked ?? false;
-            _config.MPVPath = txtMPVPath.Text;
 
             ConfigManager.Salvar(_config);
 

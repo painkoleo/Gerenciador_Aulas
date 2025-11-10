@@ -32,7 +32,7 @@
 
 O **Gerenciador de Aulas** é uma aplicação de desktop desenvolvida em **WPF (.NET/C#)** cujo objetivo principal é organizar, rastrear o progresso e reproduzir coleções de aulas em vídeo.
 
-O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo em uma estrutura de árvore hierárquica (`TreeView`), marque vídeos como assistidos, e utilize um *player* de mídia embutido para a reprodução. O estado de progresso é salvo automaticamente, permitindo que o usuário retome suas atividades a qualquer momento.
+O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo em uma estrutura de árvore hierárquica (`TreeView`), marque vídeos como assistidos, e utilize um *player* de mídia embutido para a reprodução **contínua de vídeos**. O estado de progresso é salvo automaticamente, permitindo que o usuário retome suas atividades a qualquer momento.
 
 - **Tratamento de Erros Robusto:** A aplicação agora inclui um sistema de tratamento de exceções global para capturar e registrar erros inesperados, melhorando a estabilidade e a experiência do usuário.
 
@@ -115,7 +115,7 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 
 | Botão | Função | Comportamento |
 | :--- | :--- | :--- |
-| **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. |
+| **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. **A reprodução contínua avançará automaticamente para o próximo vídeo não assistido na sequência, se ativada nas configurações.** |
 | **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
 
 * **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
@@ -125,7 +125,7 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 A janela de configurações, acessada pelo ícone de engrenagem na barra de ferramentas, é organizada em abas.
 
 1.  **Aba "Geral":**
-    *   **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente.
+    *   **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente **após a conclusão do vídeo atual**.
     *   **Tela Cheia (Fullscreen):** Marque para que o player de vídeo sempre inicie em modo tela cheia.
     *   **Minimizar para Bandeja:** Altera o comportamento do botão de fechar para minimizar a aplicação para a bandeja do sistema.
 
@@ -213,7 +213,7 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 
 | Comando | Função |
 | :--- | :--- |
-| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o primeiro vídeo não assistido dentro dela. Este comando é assíncrono. |
+| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o **primeiro vídeo não assistido** dentro dela. **Este comando agora inicia uma playlist de reprodução contínua dos vídeos subsequentes não assistidos.** Este comando é assíncrono. |
 | `AddFoldersCommand` | Lida com a adição assíncrona de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
 | `RefreshListCommand` | Recarrega a estrutura da `TreeView` (via `ITreeViewDataService`) e restaura o estado de progresso salvo no disco. |
 | `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo (via `ITreeViewDataService`). |
@@ -226,7 +226,7 @@ A reprodução de mídia agora é abstraída através da interface `IMediaPlayer
 1.  **Abstração:** O ViewModel interage apenas com a interface `IMediaPlayerService`, sem conhecimento dos detalhes de implementação do player.
 2.  **Assincronicidade e Robustez:** Os métodos de reprodução são assíncronos e foram aprimorados para garantir que a UI permaneça responsiva e que a reprodução seja controlada de forma robusta, utilizando `CancellationTokenSource` para gerenciar o ciclo de vida da reprodução e garantir que os comandos de Play/Stop funcionem de maneira confiável.
 3.  **Controle de Fluxo:** O serviço gerencia o ciclo de vida do player externo, incluindo inicialização, reprodução, parada e tratamento de erros.
-4.  **Reprodução Contínua:** A lógica de reprodução contínua é orquestrada pelo ViewModel, que solicita ao `IMediaPlayerService` para reproduzir o próximo vídeo após a conclusão do atual, se a configuração `ReproducaoContinua` estiver ativa.
+4.  **Reprodução Contínua:** A lógica de reprodução contínua é orquestrada pelo ViewModel, que solicita ao `IMediaPlayerService` para reproduzir o próximo vídeo após a conclusão do atual, se a configuração `ReproducaoContinua` estiver ativa. **O sistema agora garante que a marcação de vídeos assistidos na TreeView seja atualizada em tempo real após a conclusão de cada vídeo.**
 
 ## 5. Gerenciamento e Persistência de Estado
 
@@ -243,6 +243,7 @@ A lógica de rastreamento de progresso, que antes estava diretamente no `MainWin
 *   **Atualização em Cascata:** Quando a propriedade `IsChecked` de um `VideoItem` muda, o `ITreeViewDataService` propaga a alteração recursivamente para seus pais (`FolderItem`).
 *   **Progresso de Pasta:** Cada `FolderItem` calcula dinamicamente seu progresso (ex: "Nome da Pasta (10/12)") com base no número de vídeos assistidos em seus filhos, com a ajuda do `ITreeViewDataService`.
 *   **Estado Misto:** Um `FolderItem` utiliza o estado de *checkbox* **indeterminado** (ou `null`) quando alguns, mas não todos, os vídeos em sua hierarquia estão marcados, também gerenciado pelo `ITreeViewDataService`.
+*   O `ITreeViewDataService` agora também é responsável por fornecer a **instância correta de `VideoItem` da `TreeRoot`** para o `IMediaPlayerService`, garantindo que as atualizações de `IsChecked` sejam refletidas visualmente na `TreeView`.
 
 ## 6. Serviços e Injeção de Dependência
 

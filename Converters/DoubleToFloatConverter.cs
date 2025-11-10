@@ -4,25 +4,24 @@ using System.Windows.Data;
 
 namespace GerenciadorAulas.Converters
 {
-    public class LongToTimeSpanConverter : IValueConverter
+    public class DoubleToFloatConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is long milliseconds)
+            if (value is double doubleValue)
             {
-                TimeSpan timeSpan = TimeSpan.FromMilliseconds(milliseconds);
-                return timeSpan.ToString(@"hh\:mm\:ss");
+                return (float)doubleValue;
             }
-            return "00:00:00";
+            return 0.0f; // Valor padrão ou tratamento de erro
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is TimeSpan timeSpan)
+            if (value is float floatValue)
             {
-                return (long)timeSpan.TotalMilliseconds;
+                return (double)floatValue;
             }
-            return 0L;
+            return 0.0; // Valor padrão ou tratamento de erro
         }
     }
 }

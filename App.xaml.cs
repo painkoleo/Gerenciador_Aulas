@@ -40,7 +40,8 @@ namespace GerenciadorAulas
             // Register services
             services.AddSingleton<IWindowManager>(provider => new WindowManager(provider));
             services.AddSingleton<IPersistenceService, PersistenceService>();
-            services.AddSingleton<IMediaPlayerService, EmbeddedVlcPlayerUIService>();
+            services.AddSingleton<IMediaPlayerService>(provider =>
+                new EmbeddedVlcPlayerUIService(provider.GetRequiredService<ITreeViewDataService>()));
             services.AddSingleton<ITreeViewDataService>(provider =>
                 new TreeViewDataService(
                     provider.GetRequiredService<IWindowManager>(),

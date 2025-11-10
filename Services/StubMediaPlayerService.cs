@@ -14,7 +14,16 @@ namespace GerenciadorAulas.Services
         public event EventHandler? IsPlayingChanged; // Implementação do evento
 #pragma warning restore CS0067 // O evento 'IsPlayingChanged' nunca é usado
 
-        public int Volume { get; set; } = 0; // Retorna 0 para o stub
+        public long Length => 0; // Retorna 0 para o stub
+        public long Time { get; set; } = 0; // Retorna 0 para o stub
+        public float Position { get; set; } = 0.0f; // Retorna 0.0f para o stub
+
+        private int _currentVolume = 50; // Valor padrão para o stub
+        public int Volume
+        {
+            get => _currentVolume;
+            set => _currentVolume = value;
+        }
 
         public Task PlayAsync(VideoItem video)
         {
@@ -50,5 +59,19 @@ namespace GerenciadorAulas.Services
         {
             return Task.CompletedTask;
         }
+
+        public Task SetPlaylistAndPlayAsync(IEnumerable<VideoItem> playlist, bool startFromBeginning = true)
+        {
+            return Task.CompletedTask;
+        }
+
+        public void PlayNext() { }
+        public void PlayPrevious() { }
+        public bool HasNext => false;
+        public bool HasPrevious => false;
+
+#pragma warning disable CS0067 // O evento 'VideoEnded' nunca é usado
+        public event EventHandler<VideoItem>? VideoEnded;
+#pragma warning restore CS0067 // O evento 'VideoEnded' nunca é usado
     }
 }

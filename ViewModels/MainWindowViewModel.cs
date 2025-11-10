@@ -8,8 +8,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading; // Adicionado para DispatcherTimer
 using GerenciadorAulas.Commands;
-using GerenciadorAulas.Exceptions;
 using GerenciadorAulas.Models;
 using GerenciadorAulas.Services;
 using LibVLCSharp.Shared;
@@ -35,12 +35,12 @@ namespace GerenciadorAulas.ViewModels
 
 
 
-        private void BtnRefresh_Click()
+        private async void BtnRefresh_Click()
         {
             LogService.Log("Comando 'Atualizar Lista' acionado.");
             FolderProgressList.Clear(); // Clear only this, TreeRoot is managed by service
 
-            _treeViewDataService.LoadInitialTree();
+            await _treeViewDataService.LoadInitialTree();
 
             AtualizarProgresso();
         }
@@ -139,28 +139,72 @@ namespace GerenciadorAulas.ViewModels
         public int TotalVideos => TreeRoot.SelectMany(_treeViewDataService.GetAllVideosRecursive).Count();
 
         // Propriedades e Comandos do Player
-        public RelayCommand PlayPauseCommand { get; }
+        public AsyncRelayCommand PlayPauseCommand { get; }
         public RelayCommand StopPlayerCommand { get; }
         public RelayCommand ToggleMuteCommand { get; }
 
+        private int _currentVolume = 50; // Valor padrão
+
         public int Volume
         {
-            get => _mediaPlayerService.Volume;
+            get => _currentVolume;
             set
             {
-                if (_mediaPlayerService.Volume != value)
+                if (_currentVolume != value)
                 {
-                    _mediaPlayerService.Volume = value;
+                    _currentVolume = value;
                     OnPropertyChanged(nameof(Volume));
+                    if (_mediaPlayerService != null)
+                    {
+                        _mediaPlayerService.Volume = value;
+                    }
                 }
             }
         }
 
         public bool IsPlaying => _mediaPlayerService.IsPlaying;
 
+        private long _currentTime;
+        public long CurrentTime
+        {
+            get => _currentTime;
+            set { _currentTime = value; OnPropertyChanged(nameof(CurrentTime)); }
+        }
+
+        private long _totalTime;
+        public long TotalTime
+        {
+            get => _totalTime;
+            set { _totalTime = value; OnPropertyChanged(nameof(TotalTime)); }
+        }
+
+        private float _playbackPosition;
+        public float PlaybackPosition
+        {
+            get => _playbackPosition;
+            set
+            {
+                if (_playbackPosition != value)
+                {
+                    _playbackPosition = value;
+                    OnPropertyChanged(nameof(PlaybackPosition));
+                }
+            }
+        }
+
+        private bool _isSeeking;
+        public bool IsSeeking
+        {
+            get => _isSeeking;
+            set { _isSeeking = value; OnPropertyChanged(nameof(IsSeeking)); }
+        }
+
+        private DispatcherTimer _timer;
+
         public async Task InitializeMediaPlayerAsync()
         {
             await _mediaPlayerService.InitializeAsync();
+            await _treeViewDataService.LoadInitialTree(); // Carrega a TreeView de forma assíncrona e aguarda
         }
         // ----------------------------------------------------
         // COMANDOS
@@ -181,6 +225,13 @@ namespace GerenciadorAulas.ViewModels
         public AsyncRelayCommand<object?> BackupToCloudCommand { get; }
         public AsyncRelayCommand RestoreFromCloudCommand { get; }
 
+        public RelayCommand StartSeekCommand { get; }
+        public RelayCommand EndSeekCommand { get; }
+        public RelayCommand<float> SeekCommand { get; }
+
+        public RelayCommand PlayNextCommand { get; }
+        public RelayCommand PlayPreviousCommand { get; }
+
         // ----------------------------------------------------
         // CONSTRUTORES
         // ----------------------------------------------------
@@ -199,8 +250,14 @@ namespace GerenciadorAulas.ViewModels
             _treeViewDataService = treeViewDataService;
             _cloudStorageService = cloudStorageService;
 
+            // Aplicar o volume inicial ao serviço de mídia
+            _mediaPlayerService.Volume = _currentVolume;
+
+            // Aplicar o volume inicial ao serviço de mídia
+            _mediaPlayerService.Volume = _currentVolume;
+
             // Inicializa Comandos do Player
-            PlayPauseCommand = new RelayCommand(async _ =>
+            PlayPauseCommand = new AsyncRelayCommand(async () =>
             {
                 if (_mediaPlayerService.MediaPlayer.Media == null) // Nenhum vídeo carregado
                 {
@@ -235,11 +292,35 @@ namespace GerenciadorAulas.ViewModels
             StopPlayerCommand = new RelayCommand(_ => BtnStop_Click()); // Chama o método que define IsManuallyStopped
             ToggleMuteCommand = new RelayCommand(_ => _mediaPlayerService.ToggleMute());
 
-            _mediaPlayerService.IsPlayingChanged += (sender, e) => OnPropertyChanged(nameof(IsPlaying)); // Assina o evento
+            _mediaPlayerService.IsPlayingChanged += (sender, e) =>
+            {
+                OnPropertyChanged(nameof(IsPlaying));
+                if (IsPlaying)
+                {
+                    _timer.Start();
+                }
+                else
+                {
+                    _timer.Stop();
+                }
+            }; // Assina o evento
+
+            // Inicializa o timer para a barra de progresso
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromMilliseconds(500); // Atualiza a cada 500ms
+            _timer.Tick += (sender, e) =>
+            {
+                if (!IsSeeking) // Só atualiza se o usuário não estiver arrastando o slider
+                {
+                    CurrentTime = _mediaPlayerService?.Time ?? 0;
+                    TotalTime = _mediaPlayerService?.Length ?? 0;
+                    PlaybackPosition = _mediaPlayerService?.Position ?? 0.0f;
+                }
+            };
 
             // 2. Carrega Configurações/Estado
             _configuracoes = ConfigManager.Carregar();
-            _treeViewDataService.LoadInitialTree();
+            // _treeViewDataService.LoadInitialTree(); // Removido do construtor, será chamado em InitializeMediaPlayerAsync
             LogService.Log($"[DEBUG] VideosAssistidos carregados: {_treeViewDataService.VideosAssistidos.Count} vídeos.");
             foreach (var videoPath in _treeViewDataService.VideosAssistidos)
             {
@@ -385,6 +466,28 @@ namespace GerenciadorAulas.ViewModels
             BackupToCloudCommand = new AsyncRelayCommand<object?>(BackupToCloudAsync);
             RestoreFromCloudCommand = new AsyncRelayCommand(RestoreFromCloudAsync);
 
+            StartSeekCommand = new RelayCommand(_ => IsSeeking = true);
+            EndSeekCommand = new RelayCommand(_ => IsSeeking = false);
+            SeekCommand = new RelayCommand<float>(position =>
+            {
+                _mediaPlayerService.Position = position;
+                CurrentTime = _mediaPlayerService.Time; // Atualiza o tempo atual imediatamente
+            });
+
+            PlayNextCommand = new RelayCommand(_ => _mediaPlayerService.PlayNext());
+            PlayPreviousCommand = new RelayCommand(_ => _mediaPlayerService.PlayPrevious());
+
+            _mediaPlayerService.VideoEnded += (sender, video) =>
+            {
+                LogService.Log($"[DEBUG] MainWindowViewModel: Evento VideoEnded disparado para: {video.FullPath}");
+                // Marcar o vídeo como assistido e salvar o estado
+                video.IsChecked = true;
+                SalvarUltimoVideo(video.FullPath);
+                _treeViewDataService.SalvarEstadoVideosAssistidos();
+                _treeViewDataService.SaveTreeViewEstado();
+                AtualizarProgresso(); // Atualiza a UI para refletir o vídeo marcado
+            };
+
             AtualizarProgresso();
         }
 
@@ -411,7 +514,7 @@ namespace GerenciadorAulas.ViewModels
                         _persistenceService.RestoreData(tempDownloadPath);
 
                         // 3. Recarregar dados da aplicação
-                        _treeViewDataService.LoadInitialTree();
+                        await _treeViewDataService.LoadInitialTree();
                         AtualizarProgresso();
 
                         _windowManager.ShowMessageBox($"Backup '{selectedBackup.Name}' restaurado com sucesso!");
@@ -489,7 +592,7 @@ namespace GerenciadorAulas.ViewModels
             }
         }
 
-        private void RestoreData()
+        private async Task RestoreData()
         {
             try
             {
@@ -502,7 +605,7 @@ namespace GerenciadorAulas.ViewModels
                         _persistenceService.RestoreData(sourcePath);
 
                         // Recarregar dados
-                        _treeViewDataService.LoadInitialTree();
+                        await _treeViewDataService.LoadInitialTree();
                         AtualizarProgresso();
 
                         _windowManager.ShowMessageBox("Backup restaurado com sucesso!");
@@ -515,7 +618,6 @@ namespace GerenciadorAulas.ViewModels
                 _windowManager.ShowMessageBox($"Ocorreu um erro ao restaurar o backup: {ex.Message}");
             }
         }
-
         // ----------------------------------------------------
         // 🔹 Carregamento e Drag & Drop
         // ----------------------------------------------------
@@ -605,66 +707,82 @@ namespace GerenciadorAulas.ViewModels
                 LogService.LogWarning("Tentativa de reproduzir vídeos, mas a lista de vídeos está vazia.");
                 return;
             }
-            LogService.Log($"Iniciando reprodução assíncrona de 1 vídeo(s). Primeiro vídeo: {videoList.FirstOrDefault()?.FullPath}");
-
+            
             IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
-            _mediaPlayerService.Stop(); // Garante que a reprodução anterior seja parada e o _playbackCompletion seja completado
 
-            foreach (var video in videoList)
+            // Construir a playlist completa de vídeos não assistidos a partir do primeiro vídeo da lista fornecida
+            var allVideos = _treeViewDataService.GetAllVideosFromPersistedState().ToList();
+            var firstVideoToPlay = videoList.First(); // O primeiro vídeo que o usuário clicou
+            
+            // Normalizar o caminho do vídeo selecionado para comparação
+            var normalizedFirstVideoPath = NormalizePath(firstVideoToPlay.FullPath);
+
+            var startIndex = allVideos.FindIndex(v => NormalizePath(v.FullPath) == normalizedFirstVideoPath);
+            if (startIndex == -1)
             {
-                LogService.Log($"[DEBUG] ReproduzirVideosAsync - Loop. IsManuallyStopped: {IsManuallyStopped}, Video: {video.Name}");
-                if (IsManuallyStopped) break; // Interrompe se o usuário parou manualmente
+                LogService.LogError($"[DEBUG] O vídeo '{firstVideoToPlay.FullPath}' (normalizado: '{normalizedFirstVideoPath}') não foi encontrado na lista completa de vídeos persistida.");
+                _windowManager?.ShowMessageBox("O vídeo selecionado não foi encontrado na lista de vídeos persistida.");
+                return;
+            }
 
-                LogService.Log($"Reproduzindo vídeo: {video.FullPath}");
-                VideoAtual = $"Reproduzindo: {video.Name}";
+            var playlistToService = new List<VideoItem>();
+            // Adicionar o vídeo clicado, mesmo que já esteja assistido, para garantir que ele seja o primeiro a tocar
+            playlistToService.Add(allVideos[startIndex]);
 
-                // Marca como assistido e salva o último vídeo ANTES de reproduzir
-                video.IsChecked = true;
-                LogService.Log($"[DEBUG] Vídeo '{video.Name}' marcado como assistido. IsChecked: {video.IsChecked}");
-                SalvarUltimoVideo(video.FullPath);
-                _treeViewDataService.SalvarEstadoVideosAssistidos(); // Salva o estado dos vídeos assistidos
-                _treeViewDataService.SaveTreeViewEstado(); // Salva o estado da TreeView (para atualizar checkboxes)
-
-                try
+            for (int i = startIndex + 1; i < allVideos.Count; i++)
+            {
+                if (!allVideos[i].IsChecked) // Adiciona apenas vídeos não assistidos subsequentes
                 {
-                    await _mediaPlayerService.PlayAsync(video);
-                }
-                catch (MpvPathNotConfiguredException ex)
-                {
-                    LogService.LogWarning(ex.Message);
-                    _windowManager.ShowMessageBox(ex.Message + "\nPor favor, configure-o agora.");
-                    _windowManager.ShowConfigWindow(Configuracoes, this);
-                    IsManuallyStopped = true; // Stop further playback attempts
-                    break; // Exit the loop
-                }
-
-                // Se a reprodução contínua estiver desativada, para após o primeiro vídeo
-                if (!Configuracoes.ReproducaoContinua)
-                {
-                    // IsManuallyStopped = true; // Removido para permitir que o botão "Próximo Vídeo" funcione múltiplas vezes
-                    break;
+                    playlistToService.Add(allVideos[i]);
                 }
             }
 
-            await HandlePlaybackCompletion();
+            if (!playlistToService.Any())
+            {
+                LogService.LogWarning("Nenhum vídeo não assistido encontrado para reproduzir na sequência.");
+                _windowManager?.ShowMessageBox("Nenhum vídeo não assistido encontrado na sequência.");
+                return;
+            }
+
+            LogService.Log($"Iniciando reprodução assíncrona de {playlistToService.Count} vídeo(s). Primeiro vídeo na playlist: {playlistToService.FirstOrDefault()?.FullPath}");
+            
+            // Definir a playlist e iniciar a reprodução
+            await _mediaPlayerService.SetPlaylistAndPlayAsync(playlistToService, true);
+
+            // A lógica de marcação de vídeo assistido e salvamento será movida para um evento do MediaPlayerService
+            // ou para o HandlePlaybackCompletion, que será simplificado.
+            // Por enquanto, vamos marcar o primeiro vídeo da playlist como assistido aqui.
+            var currentPlayingVideo = playlistToService.FirstOrDefault();
+            if (currentPlayingVideo != null)
+            {
+                VideoAtual = $"Reproduzindo: {currentPlayingVideo.Name}";
+                currentPlayingVideo.IsChecked = true;
+                LogService.Log($"[DEBUG] Vídeo '{currentPlayingVideo.Name}' marcado como assistido. IsChecked: {currentPlayingVideo.IsChecked}");
+                SalvarUltimoVideo(currentPlayingVideo.FullPath);
+                _treeViewDataService.SalvarEstadoVideosAssistidos();
+                _treeViewDataService.SaveTreeViewEstado();
+            }
         }
 
-        private Task HandlePlaybackCompletion()
+        private void HandlePlaybackCompletion()
         {
             LogService.Log($"[DEBUG] HandlePlaybackCompletion iniciado. Configuracoes.ReproducaoContinua: {Configuracoes.ReproducaoContinua}, IsManuallyStopped: {IsManuallyStopped}");
             VideoAtual = ""; // Limpa o vídeo atual após a reprodução
 
             if (Configuracoes.ReproducaoContinua && !IsManuallyStopped)
             {
-                LogService.Log("[DEBUG] HandlePlaybackCompletion: Reprodução contínua ativada e não parada manualmente. Não há botão Próximo Vídeo.");
-                // await Application.Current.Dispatcher.InvokeAsync(new Func<Task>(BtnNextVideo_Click)); // Removido
+                LogService.Log("[DEBUG] HandlePlaybackCompletion: Reprodução contínua ativada e não parada manualmente. Verificando próximo vídeo na playlist do serviço de mídia.");
+                // A lógica de avanço para o próximo vídeo agora é tratada pelo IMediaPlayerService
+                // Este método pode ser usado para qualquer lógica pós-reprodução de um item da playlist,
+                // como marcar o vídeo atual como assistido, etc.
+                // No entanto, a chamada para PlayNext() já está no EndReached do EmbeddedVlcPlayerUIService.
+                // Então, aqui podemos apenas garantir que o estado do ViewModel seja atualizado.
             }
             else if (IsManuallyStopped) // Se foi parado manualmente, apenas registra
             {
                 LogService.Log("[DEBUG] HandlePlaybackCompletion: Reprodução parada manualmente.");
             }
             // Se ReproducaoContinua for false e não foi parado manualmente, não faz nada além de limpar VideoAtual.
-            return Task.CompletedTask;
         }
 
         // Funções Auxiliares (mantidas para a funcionalidade da TreeView)
@@ -706,6 +824,17 @@ namespace GerenciadorAulas.ViewModels
             _persistenceService.SaveLastPlayedVideo(caminho);
         }
 
-
+        private string NormalizePath(string path)
+        {
+            // Remove o prefixo "file:///" se presente
+            if (path.StartsWith("file:///"))
+            {
+                path = path.Substring("file:///".Length);
+            }
+            // Decodifica caracteres especiais (ex: %20 para espaço)
+            path = Uri.UnescapeDataString(path);
+            // Garante o formato correto do sistema de arquivos (ex: barras invertidas no Windows)
+            return Path.GetFullPath(path);
+        }
     }
 }

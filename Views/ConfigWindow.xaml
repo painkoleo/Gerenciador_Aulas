@@ -36,20 +36,10 @@
                               Unchecked="chkReproducaoContinua_Unchecked"
                               Foreground="White"/>
 
-                    <!-- MPV Fullscreen -->
-                    <CheckBox x:Name="chkFullscreenMPV" Content="MPV em tela cheia"
-                              Grid.Row="1" Grid.Column="0" Margin="0,10,0,0"
-                              Foreground="White"/>
-
                     <!-- Minimizar para Bandeja -->
                     <CheckBox x:Name="chkMinimizeToTray" Content="Minimizar para bandeja ao fechar"
-                              Grid.Row="2" Grid.Column="0" Margin="0,10,0,0"
+                              Grid.Row="1" Grid.Column="0" Margin="0,10,0,0"
                               Foreground="White"/>
-
-                    <!-- Caminho do MPV -->
-                    <Label Content="Caminho do MPV:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Foreground="White"/>
-                    <TextBox x:Name="txtMPVPath" Grid.Row="3" Grid.Column="0" Margin="120,0,5,0"/>
-                    <Button Content="Selecionar..." Grid.Row="3" Grid.Column="1" Click="BtnSelecionarMPV_Click"/>
                 </Grid>
             </TabItem>
             <TabItem Header="Backup">

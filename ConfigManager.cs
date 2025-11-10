@@ -27,17 +27,31 @@ namespace GerenciadorAulas
                 {
                     LogService.Log($"Configuração alterada: ReproducaoContinua de '{oldConfig.ReproducaoContinua}' para '{config.ReproducaoContinua}'");
                 }
-                if (config.MPVFullscreen != oldConfig.MPVFullscreen)
-                {
-                    LogService.Log($"Configuração alterada: MPVFullscreen de '{oldConfig.MPVFullscreen}' para '{config.MPVFullscreen}'");
-                }
-                if (config.MPVPath != oldConfig.MPVPath)
-                {
-                    LogService.Log($"Configuração alterada: MPVPath de '{oldConfig.MPVPath}' para '{config.MPVPath}'");
-                }
                 if (config.LogDirectory != oldConfig.LogDirectory)
                 {
                     LogService.Log($"Configuração alterada: LogDirectory de '{oldConfig.LogDirectory}' para '{config.LogDirectory}'");
+                }
+
+                // Logar as mudanças nas propriedades da janela
+                if (config.WindowLeft != oldConfig.WindowLeft)
+                {
+                    LogService.Log($"Configuração alterada: WindowLeft de '{oldConfig.WindowLeft}' para '{config.WindowLeft}'");
+                }
+                if (config.WindowTop != oldConfig.WindowTop)
+                {
+                    LogService.Log($"Configuração alterada: WindowTop de '{oldConfig.WindowTop}' para '{config.WindowTop}'");
+                }
+                if (config.WindowWidth != oldConfig.WindowWidth)
+                {
+                    LogService.Log($"Configuração alterada: WindowWidth de '{oldConfig.WindowWidth}' para '{config.WindowWidth}'");
+                }
+                if (config.WindowHeight != oldConfig.WindowHeight)
+                {
+                    LogService.Log($"Configuração alterada: WindowHeight de '{oldConfig.WindowHeight}' para '{config.WindowHeight}'");
+                }
+                if (config.WindowState != oldConfig.WindowState)
+                {
+                    LogService.Log($"Configuração alterada: WindowState de '{oldConfig.WindowState}' para '{config.WindowState}'");
                 }
 
                 string dir = Path.GetDirectoryName(arquivoConfig)!;

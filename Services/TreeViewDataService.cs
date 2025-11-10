@@ -27,10 +27,10 @@ namespace GerenciadorAulas.Services
             _configuracoesProvider = configuracoesProvider;
         }
 
-        public void LoadInitialTree()
+        public async Task LoadInitialTree()
         {
             CarregarEstadoVideosAssistidos();
-            CarregarEstadoTreeView();
+            await CarregarEstadoTreeView();
         }
 
         public async Task AddFolderOrVideo(string? path)
@@ -70,6 +70,10 @@ namespace GerenciadorAulas.Services
             {
                 LogService.LogError($"Erro ao adicionar pasta ou vídeo: {ex.Message}", ex);
                 throw; // Relança a exceção para que o chamador possa tratá-la
+            }
+            finally
+            {
+                LogService.Log($"[DEBUG] AddFolderOrVideo concluído. TreeRoot.Count: {TreeRoot.Count}");
             }
         }
 
@@ -152,7 +156,7 @@ namespace GerenciadorAulas.Services
             _persistenceService.SaveTreeViewEstado(estado);
         }
 
-        public void CarregarEstadoTreeView()
+        public async Task CarregarEstadoTreeView()
         {
             LogService.Log("Carregando estado da TreeView.");
             var estado = _persistenceService.LoadTreeViewEstado();
@@ -162,20 +166,37 @@ namespace GerenciadorAulas.Services
                 return;
             }
 
+            LogService.Log($"[DEBUG] Estado da TreeView carregado. Pastas: {estado.Pastas.Count}");
+            foreach (var folderPath in estado.Pastas)
+            {
+                LogService.Log($"[DEBUG] Pasta no estado: {folderPath}");
+            }
+
             _isInitializing = true;
             try
             {
                 TreeRoot.Clear(); // Adicionado para limpar a TreeRoot antes de carregar
                 ItensCarregados.Clear(); // Limpar também o HashSet de itens carregados
 
-                foreach (var folderPath in estado.Pastas)
+                // Usar Task.Run para carregar as pastas em uma thread separada
+                await Task.Run(() =>
                 {
-                    if (Directory.Exists(folderPath) && !ItensCarregados.Contains(folderPath))
+                    foreach (var folderPath in estado.Pastas)
                     {
-                        CarregarPastaRecursivaSincrona(folderPath, TreeRoot);
+                        if (Directory.Exists(folderPath) && !ItensCarregados.Contains(folderPath))
+                        {
+                            // Adicionar diretamente à TreeRoot, pois estamos em uma thread de background
+                            // e a ObservableCollection será atualizada na UI thread após a conclusão do Task.Run
+                            var folder = _CarregarPastaRecursivaInterno(folderPath, TreeRoot);
+                            if (folder != null)
+                            {
+                                Application.Current.Dispatcher.Invoke(() => TreeRoot.Add(folder));
+                            }
+                        }
                     }
-                }
+                });
 
+                // Restaurar o estado dos itens após a TreeRoot ser populada
                 foreach (var item in TreeRoot)
                     RestaurarEstadoRecursivo(item, estado);
             }
@@ -245,7 +266,7 @@ namespace GerenciadorAulas.Services
 
                     if (GetAllVideosRecursive(folder).Any() || folder.Children.OfType<FolderItem>().Any())
                     {
-                        parent.Add(folder);
+                        Application.Current.Dispatcher.Invoke(() => parent.Add(folder));
                         ItensCarregados.Add(dir);
                         AtualizarCheckboxFolder(folder);
                         AtualizarNomeComProgresso(folder);
@@ -263,7 +284,7 @@ namespace GerenciadorAulas.Services
                 {
                     if (!ItensCarregados.Contains(file))
                     {
-                        parent.Add(CriarVideoItem(file, parentFolder));
+                        Application.Current.Dispatcher.Invoke(() => parent.Add(CriarVideoItem(file, parentFolder)));
                         ItensCarregados.Add(file);
                     }
                 }
@@ -401,7 +422,7 @@ namespace GerenciadorAulas.Services
             var folder = _CarregarPastaRecursivaInterno(path, parent);
             if (folder != null)
             {
-                parent.Add(folder);
+                Application.Current.Dispatcher.Invoke(() => parent.Add(folder));
             }
         }
 
@@ -449,6 +470,100 @@ namespace GerenciadorAulas.Services
                 return folder;
             }
             return null;
+        }
+
+        public IEnumerable<VideoItem> GetAllVideosFromPersistedState()
+        {
+            var allVideos = new List<VideoItem>();
+            var estado = _persistenceService.LoadTreeViewEstado();
+            var videosAssistidos = _persistenceService.LoadWatchedVideos(); // Carrega os vídeos assistidos
+
+            if (estado == null)
+            {
+                LogService.LogWarning("GetAllVideosFromPersistedState: Nenhum estado da TreeView encontrado para carregar.");
+                return allVideos;
+            }
+
+            // Para cada pasta raiz salva no estado
+            foreach (var folderPath in estado.Pastas)
+            {
+                if (Directory.Exists(folderPath))
+                {
+                    // Recursivamente, adicione todos os vídeos desta pasta
+                    AdicionarVideosDePastaRecursivamente(folderPath, allVideos, videosAssistidos);
+                }
+            }
+            return allVideos;
+        }
+
+        private void AdicionarVideosDePastaRecursivamente(string currentPath, List<VideoItem> videoList, HashSet<string> videosAssistidos)
+        {
+            // Adicionar vídeos diretamente na pasta atual
+            foreach (var file in Directory.GetFiles(currentPath).Where(EhVideo))
+            {
+                videoList.Add(new VideoItem
+                {
+                    Name = Path.GetFileName(file),
+                    FullPath = file,
+                    IsChecked = videosAssistidos.Contains(file)
+                });
+            }
+
+            // Chamar recursivamente para subpastas
+            foreach (var dir in Directory.GetDirectories(currentPath))
+            {
+                AdicionarVideosDePastaRecursivamente(dir, videoList, videosAssistidos);
+            }
+        }
+
+        public VideoItem? GetVideoItemByPath(string fullPath)
+        {
+            // Normalizar o caminho de entrada para garantir a comparação correta
+            var normalizedFullPath = NormalizePath(fullPath);
+
+            // Percorrer a TreeRoot para encontrar o VideoItem correspondente
+            foreach (var item in TreeRoot)
+            {
+                var video = FindVideoItemRecursive(item, normalizedFullPath);
+                if (video != null)
+                {
+                    return video;
+                }
+            }
+            return null;
+        }
+
+        private VideoItem? FindVideoItemRecursive(object item, string normalizedFullPath)
+        {
+            if (item is VideoItem videoItem)
+            {
+                if (NormalizePath(videoItem.FullPath) == normalizedFullPath)
+                {
+                    return videoItem;
+                }
+            }
+            else if (item is FolderItem folderItem)
+            {
+                foreach (var child in folderItem.Children)
+                {
+                    var foundVideo = FindVideoItemRecursive(child, normalizedFullPath);
+                    if (foundVideo != null)
+                    {
+                        return foundVideo;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Método auxiliar para normalizar caminhos (pode ser movido para um utilitário se usado em mais lugares)
+        private string NormalizePath(string path)
+        {
+            if (path.StartsWith("file:///"))
+            {
+                path = path.Substring("file:///".Length);
+            }
+            return Path.GetFullPath(Uri.UnescapeDataString(path));
         }
     }
 }
