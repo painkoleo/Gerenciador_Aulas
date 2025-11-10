@@ -1,7 +1,9 @@
-﻿using System.Windows;
+using System.Windows;
 using GerenciadorAulas.ViewModels;
 using System.Windows.Forms;
 using System.Drawing;
+using LibVLCSharp.Shared;
+using GerenciadorAulas.Services; // Adicionado
 
 namespace GerenciadorAulas.Views
 {
@@ -9,12 +11,24 @@ namespace GerenciadorAulas.Views
     {
         private NotifyIcon? _notifyIcon;
         private bool _isExplicitClose = false;
+        private readonly IMediaPlayerService _mediaPlayerService;
 
-        public MainWindow(MainWindowViewModel viewModel)
+        public MainWindow(MainWindowViewModel viewModel, IMediaPlayerService mediaPlayerService)
         {
             InitializeComponent();
             DataContext = viewModel;
             InitializeNotifyIcon();
+            _mediaPlayerService = mediaPlayerService;
+            this.Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainWindowViewModel viewModel)
+            {
+                await viewModel.InitializeMediaPlayerAsync();
+                VideoView.MediaPlayer = ((EmbeddedVlcPlayerUIService)_mediaPlayerService).MediaPlayer;
+            }
         }
 
         private void InitializeNotifyIcon()

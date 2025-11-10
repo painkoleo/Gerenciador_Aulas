@@ -89,6 +89,11 @@ namespace GerenciadorAulas.Services
             LogInternal(Constants.ErrorLevel, errorMessage);
         }
 
+        public static void LogDebug(string message)
+        {
+            LogInternal("DEBUG", message);
+        }
+
         private static void LogInternal(string level, string message)
         {
             var logMessage = $"[{DateTime.Now.ToString(Constants.DateTimeFormat)}] [{level}] {message}{Environment.NewLine}";

@@ -12,6 +12,7 @@ using GerenciadorAulas.Commands;
 using GerenciadorAulas.Exceptions;
 using GerenciadorAulas.Models;
 using GerenciadorAulas.Services;
+using LibVLCSharp.Shared;
 
 namespace GerenciadorAulas.ViewModels
 {
@@ -32,21 +33,7 @@ namespace GerenciadorAulas.ViewModels
             VideoAtual = "";
         }
 
-        private async Task BtnNextVideo_Click()
-        {
-            LogService.Log("Comando 'Próximo Vídeo' acionado.");
-            var nextVideo = _treeViewDataService.GetNextUnwatchedVideo();
 
-            if (nextVideo != null)
-            {
-                IsManuallyStopped = false;
-                await ReproduzirVideosAsync(new[] { nextVideo });
-            }
-            else
-            {
-                _windowManager?.ShowMessageBox("Todos os vídeos foram assistidos!");
-            }
-        }
 
         private void BtnRefresh_Click()
         {
@@ -83,7 +70,6 @@ namespace GerenciadorAulas.ViewModels
         private readonly IMediaPlayerService _mediaPlayerService;
         private readonly ITreeViewDataService _treeViewDataService;
         private readonly ICloudStorageService _cloudStorageService;
-
 
         // ----------------------------------------------------
         // CAMPOS PRIVADOS E PATHS
@@ -123,7 +109,15 @@ namespace GerenciadorAulas.ViewModels
         public bool IsManuallyStopped
         {
             get => _isManuallyStopped;
-            set { _isManuallyStopped = value; OnPropertyChanged(nameof(IsManuallyStopped)); }
+            set
+            {
+                if (_isManuallyStopped != value)
+                {
+                    LogService.Log($"[DEBUG] IsManuallyStopped alterado de {_isManuallyStopped} para {value}. Chamador: {new StackTrace().GetFrame(1)?.GetMethod()?.Name}");
+                    _isManuallyStopped = value;
+                    OnPropertyChanged(nameof(IsManuallyStopped));
+                }
+            }
         }
 
         public bool IsLoading
@@ -144,12 +138,35 @@ namespace GerenciadorAulas.ViewModels
         public int TotalFolders => TreeRoot.OfType<FolderItem>().Count();
         public int TotalVideos => TreeRoot.SelectMany(_treeViewDataService.GetAllVideosRecursive).Count();
 
+        // Propriedades e Comandos do Player
+        public RelayCommand PlayPauseCommand { get; }
+        public RelayCommand StopPlayerCommand { get; }
+        public RelayCommand ToggleMuteCommand { get; }
+
+        public int Volume
+        {
+            get => _mediaPlayerService.Volume;
+            set
+            {
+                if (_mediaPlayerService.Volume != value)
+                {
+                    _mediaPlayerService.Volume = value;
+                    OnPropertyChanged(nameof(Volume));
+                }
+            }
+        }
+
+        public bool IsPlaying => _mediaPlayerService.IsPlaying;
+
+        public async Task InitializeMediaPlayerAsync()
+        {
+            await _mediaPlayerService.InitializeAsync();
+        }
         // ----------------------------------------------------
         // COMANDOS
         // ----------------------------------------------------
         public RelayCommand<VideoItem?> PlayVideoCommand { get; }
         public AsyncRelayCommand<object?> PlaySelectedItemCommand { get; }
-        public AsyncRelayCommand<object?> NextVideoCommand { get; }
         public RelayCommand<object?> StopPlaybackCommand { get; }
         public RelayCommand<object?> RefreshListCommand { get; }
         public RelayCommand<string> AddFoldersCommand { get; }
@@ -182,11 +199,52 @@ namespace GerenciadorAulas.ViewModels
             _treeViewDataService = treeViewDataService;
             _cloudStorageService = cloudStorageService;
 
+            // Inicializa Comandos do Player
+            PlayPauseCommand = new RelayCommand(async _ =>
+            {
+                if (_mediaPlayerService.MediaPlayer.Media == null) // Nenhum vídeo carregado
+                {
+                    // Tenta reproduzir o item selecionado na TreeView
+                    if (SelectedItems.FirstOrDefault() is VideoItem selectedVideo)
+                    {
+                        await ReproduzirVideosAsync(new[] { selectedVideo });
+                    }
+                    else if (SelectedItems.FirstOrDefault() is FolderItem selectedFolder)
+                    {
+                        var nextVideoInFolder = _treeViewDataService.GetVideosRecursive(selectedFolder)
+                                                     .FirstOrDefault(v => !v.IsChecked);
+                        if (nextVideoInFolder != null)
+                        {
+                            await ReproduzirVideosAsync(new[] { nextVideoInFolder });
+                        }
+                        else
+                        {
+                            _windowManager?.ShowMessageBox($"A pasta '{selectedFolder.Name}' já está completa ou não contém vídeos não assistidos.");
+                        }
+                    }
+                    else
+                    {
+                        _windowManager?.ShowMessageBox("Nenhum vídeo ou pasta selecionada para reproduzir.");
+                    }
+                }
+                else
+                {
+                    _mediaPlayerService.PlayPause(); // Pausa/retoma o vídeo atual
+                }
+            });
+            StopPlayerCommand = new RelayCommand(_ => BtnStop_Click()); // Chama o método que define IsManuallyStopped
+            ToggleMuteCommand = new RelayCommand(_ => _mediaPlayerService.ToggleMute());
 
+            _mediaPlayerService.IsPlayingChanged += (sender, e) => OnPropertyChanged(nameof(IsPlaying)); // Assina o evento
 
             // 2. Carrega Configurações/Estado
             _configuracoes = ConfigManager.Carregar();
             _treeViewDataService.LoadInitialTree();
+            LogService.Log($"[DEBUG] VideosAssistidos carregados: {_treeViewDataService.VideosAssistidos.Count} vídeos.");
+            foreach (var videoPath in _treeViewDataService.VideosAssistidos)
+            {
+                LogService.Log($"[DEBUG] Vídeo assistido: {videoPath}");
+            }
 
             // 3. Inicializa Comandos
 
@@ -196,19 +254,7 @@ namespace GerenciadorAulas.ViewModels
                 {
                     LogService.Log($"Comando 'Reproduzir Vídeo' acionado para: {video.FullPath}");
                     IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
-                    try
-                    {
-                        await _mediaPlayerService.PlayAsync(video);
-                        VideoAtual = $"Reproduzindo: {video.Name}";
-                        video.IsChecked = true;
-                        SalvarUltimoVideo(video.FullPath);
-                    }
-                    catch (MpvPathNotConfiguredException ex)
-                    {
-                        LogService.LogWarning(ex.Message);
-                        _windowManager.ShowMessageBox(ex.Message + "\nPor favor, configure-o agora.");
-                        _windowManager.ShowConfigWindow(Configuracoes, this);
-                    }
+                    await ReproduzirVideosAsync(new[] { video });
                 }
                 else
                 {
@@ -252,7 +298,6 @@ namespace GerenciadorAulas.ViewModels
             });
             // FIM NOVO COMANDO
 
-            NextVideoCommand = new AsyncRelayCommand<object?>(async _ => await BtnNextVideo_Click());
             StopPlaybackCommand = new RelayCommand<object?>(_ => BtnStop_Click());
             RefreshListCommand = new RelayCommand<object?>(_ => BtnRefresh_Click());
 
@@ -553,22 +598,32 @@ namespace GerenciadorAulas.ViewModels
         // ----------------------------------------------------
         public async Task ReproduzirVideosAsync(IEnumerable<VideoItem> videos)
         {
+            LogService.Log($"[DEBUG] ReproduzirVideosAsync iniciado. IsManuallyStopped: {IsManuallyStopped}");
             var videoList = videos.ToList();
             if (!videoList.Any())
             {
                 LogService.LogWarning("Tentativa de reproduzir vídeos, mas a lista de vídeos está vazia.");
                 return;
             }
-            LogService.Log($"Iniciando reprodução assíncrona de {videoList.Count} vídeo(s). Primeiro vídeo: {videoList.FirstOrDefault()?.FullPath}");
+            LogService.Log($"Iniciando reprodução assíncrona de 1 vídeo(s). Primeiro vídeo: {videoList.FirstOrDefault()?.FullPath}");
 
             IsManuallyStopped = false; // Garante que a flag seja resetada antes de reproduzir
+            _mediaPlayerService.Stop(); // Garante que a reprodução anterior seja parada e o _playbackCompletion seja completado
 
             foreach (var video in videoList)
             {
+                LogService.Log($"[DEBUG] ReproduzirVideosAsync - Loop. IsManuallyStopped: {IsManuallyStopped}, Video: {video.Name}");
                 if (IsManuallyStopped) break; // Interrompe se o usuário parou manualmente
 
                 LogService.Log($"Reproduzindo vídeo: {video.FullPath}");
                 VideoAtual = $"Reproduzindo: {video.Name}";
+
+                // Marca como assistido e salva o último vídeo ANTES de reproduzir
+                video.IsChecked = true;
+                LogService.Log($"[DEBUG] Vídeo '{video.Name}' marcado como assistido. IsChecked: {video.IsChecked}");
+                SalvarUltimoVideo(video.FullPath);
+                _treeViewDataService.SalvarEstadoVideosAssistidos(); // Salva o estado dos vídeos assistidos
+                _treeViewDataService.SaveTreeViewEstado(); // Salva o estado da TreeView (para atualizar checkboxes)
 
                 try
                 {
@@ -583,14 +638,10 @@ namespace GerenciadorAulas.ViewModels
                     break; // Exit the loop
                 }
 
-                // Marca como assistido e salva o último vídeo
-                video.IsChecked = true;
-                SalvarUltimoVideo(video.FullPath);
-
                 // Se a reprodução contínua estiver desativada, para após o primeiro vídeo
                 if (!Configuracoes.ReproducaoContinua)
                 {
-                    IsManuallyStopped = true;
+                    // IsManuallyStopped = true; // Removido para permitir que o botão "Próximo Vídeo" funcione múltiplas vezes
                     break;
                 }
             }
@@ -598,25 +649,22 @@ namespace GerenciadorAulas.ViewModels
             await HandlePlaybackCompletion();
         }
 
-        private async Task HandlePlaybackCompletion()
+        private Task HandlePlaybackCompletion()
         {
+            LogService.Log($"[DEBUG] HandlePlaybackCompletion iniciado. Configuracoes.ReproducaoContinua: {Configuracoes.ReproducaoContinua}, IsManuallyStopped: {IsManuallyStopped}");
             VideoAtual = ""; // Limpa o vídeo atual após a reprodução
-            LogService.Log($"[MainWindowViewModel] HandlePlaybackCompletion: Configuracoes.ReproducaoContinua = {Configuracoes.ReproducaoContinua}, IsManuallyStopped = {IsManuallyStopped}");
 
             if (Configuracoes.ReproducaoContinua && !IsManuallyStopped)
             {
-                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Chamando BtnNextVideo_Click para reprodução contínua.");
-                await Application.Current.Dispatcher.InvokeAsync(new Func<Task>(BtnNextVideo_Click));
+                LogService.Log("[DEBUG] HandlePlaybackCompletion: Reprodução contínua ativada e não parada manualmente. Não há botão Próximo Vídeo.");
+                // await Application.Current.Dispatcher.InvokeAsync(new Func<Task>(BtnNextVideo_Click)); // Removido
             }
-            else if (!Configuracoes.ReproducaoContinua && !IsManuallyStopped)
+            else if (IsManuallyStopped) // Se foi parado manualmente, apenas registra
             {
-                IsManuallyStopped = true;
-                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Reprodução contínua desativada, definindo IsManuallyStopped como true.");
+                LogService.Log("[DEBUG] HandlePlaybackCompletion: Reprodução parada manualmente.");
             }
-            else if (IsManuallyStopped)
-            {
-                LogService.Log("[MainWindowViewModel] HandlePlaybackCompletion: Reprodução parada manualmente.");
-            }
+            // Se ReproducaoContinua for false e não foi parado manualmente, não faz nada além de limpar VideoAtual.
+            return Task.CompletedTask;
         }
 
         // Funções Auxiliares (mantidas para a funcionalidade da TreeView)

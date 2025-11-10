@@ -32,7 +32,7 @@
 
 O **Gerenciador de Aulas** é uma aplicação de desktop desenvolvida em **WPF (.NET/C#)** cujo objetivo principal é organizar, rastrear o progresso e reproduzir coleções de aulas em vídeo.
 
-O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo em uma estrutura de árvore hierárquica (`TreeView`), marque vídeos como assistidos, e utilize um *player* de mídia externo (`mpv.exe`) para a reprodução. O estado de progresso é salvo automaticamente, permitindo que o usuário retome suas atividades a qualquer momento.
+O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo em uma estrutura de árvore hierárquica (`TreeView`), marque vídeos como assistidos, e utilize um *player* de mídia embutido para a reprodução. O estado de progresso é salvo automaticamente, permitindo que o usuário retome suas atividades a qualquer momento.
 
 - **Tratamento de Erros Robusto:** A aplicação agora inclui um sistema de tratamento de exceções global para capturar e registrar erros inesperados, melhorando a estabilidade e a experiência do usuário.
 
@@ -43,7 +43,7 @@ O sistema permite que o usuário adicione pastas de aulas, visualize o conteúdo
 * **Padrão de Design:** MVVM (Model-View-ViewModel)
 * **Injeção de Dependência:** Utilização extensiva para desacoplamento e testabilidade.
 * **Persistência de Dados:** Serialização JSON (Newtonsoft.Json), Backup na nuvem via Google Drive API (OAuth2)
-* **Mídia:** Reprodução via serviço abstrato (`IMediaPlayerService`), com implementação padrão usando processo externo (`mpv.exe`).
+* **Mídia:** Reprodução via serviço abstrato (`IMediaPlayerService`), com implementação padrão usando `LibVLCSharp` (player embutido).
 * **Comandos Assíncronos:** Implementação de `AsyncRelayCommand` para operações não bloqueantes na UI.
 
 ---
@@ -116,7 +116,6 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 | Botão | Função | Comportamento |
 | :--- | :--- | :--- |
 | **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. |
-| **Stop** | Parar | Finaliza o player MPV e encerra a reprodução contínua. |
 | **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
 
 * **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
@@ -126,9 +125,8 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 A janela de configurações, acessada pelo ícone de engrenagem na barra de ferramentas, é organizada em abas.
 
 1.  **Aba "Geral":**
-    *   **Caminho do Executável MPV:** É essencial definir o local do arquivo `mpv.exe` para que a reprodução de vídeo funcione.
     *   **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente.
-    *   **Tela Cheia (Fullscreen):** Marque para que o MPV sempre inicie em modo tela cheia.
+    *   **Tela Cheia (Fullscreen):** Marque para que o player de vídeo sempre inicie em modo tela cheia.
     *   **Minimizar para Bandeja:** Altera o comportamento do botão de fechar para minimizar a aplicação para a bandeja do sistema.
 
 ### 2.5. Funcionalidades Adicionais
@@ -179,7 +177,7 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 | **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
 | **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
 | **View** | `Views/MainWindow.xaml`, `Views/ConfigWindow.xaml`, `Views/CloudBackupWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
-| **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/IMediaPlayerService.cs`, `Services/ITreeViewDataService.cs`, `Services/LogService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
+| **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/IMediaPlayerService.cs`, `Services/ITreeViewDataService.cs`, `Services/LogService.cs`, `Services/EmbeddedVlcPlayerUIService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
 
 ### 3.2. Estrutura de Pastas
 
@@ -189,7 +187,7 @@ Para melhor organização e aderência ao padrão MVVM, o projeto foi reestrutur
 *   **`Converters/`**: Armazena classes que implementam `IValueConverter` para transformações de dados na View.
 *   **`Helpers/`**: Inclui classes auxiliares e extensões que fornecem funcionalidades diversas.
 *   **`Models/`**: Define as classes de modelo de dados, como `VideoItem` e `FolderItem`.
-*   **`Services/`**: Contém interfaces e implementações de serviços (ex: `IPersistenceService`, `IWindowManager`, `IMediaPlayerService`, `ITreeViewDataService`, `LogService`, `MpvPlayerService`, `TreeViewDataService`, e suas versões `Stub`).
+*   **`Services/`**: Contém interfaces e implementações de serviços (ex: `IPersistenceService`, `IWindowManager`, `IMediaPlayerService`, `ITreeViewDataService`, `LogService`, `EmbeddedVlcPlayerUIService`, `TreeViewDataService`, e suas versões `Stub`).
 *   **`ViewModels/`**: Abriga as classes ViewModel, como `MainWindowViewModel` e `ViewModelBase`, que expõem dados e comandos para as Views.
 *   **`Views/`**: Contém os arquivos XAML e code-behind das janelas e controles de usuário da aplicação.
 
@@ -216,7 +214,6 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 | Comando | Função |
 | :--- | :--- |
 | `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o primeiro vídeo não assistido dentro dela. Este comando é assíncrono. |
-| `StopPlaybackCommand` | Finaliza o processo `mpv.exe` (via `IMediaPlayerService`) e reseta o estado de reprodução. |
 | `AddFoldersCommand` | Lida com a adição assíncrona de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
 | `RefreshListCommand` | Recarrega a estrutura da `TreeView` (via `ITreeViewDataService`) e restaura o estado de progresso salvo no disco. |
 | `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo (via `ITreeViewDataService`). |
@@ -224,10 +221,10 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 
 ### 4.3. Mecanismo de Reprodução de Mídia (via `IMediaPlayerService`)
 
-A reprodução de 1mídia agora é abstraída através da interface `IMediaPlayerService`, que é injetada no `MainWindowViewModel`. A implementação padrão, `MpvPlayerService`, utiliza o `mpv.exe` como processo externo.
+A reprodução de mídia agora é abstraída através da interface `IMediaPlayerService`, que é injetada no `MainWindowViewModel`. A implementação padrão utiliza `LibVLCSharp` para um player de vídeo embutido.
 
 1.  **Abstração:** O ViewModel interage apenas com a interface `IMediaPlayerService`, sem conhecimento dos detalhes de implementação do player.
-2.  **Assincronicidade:** Os métodos de reprodução são assíncronos, garantindo que a UI permaneça responsiva.
+2.  **Assincronicidade e Robustez:** Os métodos de reprodução são assíncronos e foram aprimorados para garantir que a UI permaneça responsiva e que a reprodução seja controlada de forma robusta, utilizando `CancellationTokenSource` para gerenciar o ciclo de vida da reprodução e garantir que os comandos de Play/Stop funcionem de maneira confiável.
 3.  **Controle de Fluxo:** O serviço gerencia o ciclo de vida do player externo, incluindo inicialização, reprodução, parada e tratamento de erros.
 4.  **Reprodução Contínua:** A lógica de reprodução contínua é orquestrada pelo ViewModel, que solicita ao `IMediaPlayerService` para reproduzir o próximo vídeo após a conclusão do atual, se a configuração `ReproducaoContinua` estiver ativa.
 
@@ -303,7 +300,7 @@ Esta nova interface abstrai a funcionalidade de reprodução de mídia, permitin
 
 *   A interface `IMediaPlayerService` define métodos como `PlayAsync` e `Stop` para controlar a reprodução.
 
-*   A implementação `MpvPlayerService` utiliza o `mpv.exe` como player externo, encapsulando a lógica de inicialização e controle do processo.
+*   A implementação `EmbeddedVlcPlayerUIService` utiliza `LibVLCSharp` para um player de vídeo embutido, encapsulando a lógica de inicialização e controle.
 
 *   `StubMediaPlayerService` é fornecido para fins de teste, permitindo que o ViewModel seja testado sem a necessidade de um player de mídia real.
 

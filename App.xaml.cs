@@ -6,6 +6,7 @@ using GerenciadorAulas.ViewModels;
 using GerenciadorAulas.Views;
 using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using LibVLCSharp.Shared;
 
 namespace GerenciadorAulas
 {
@@ -18,19 +19,28 @@ namespace GerenciadorAulas
             var serviceCollection = new ServiceCollection();
             ConfigureServices(serviceCollection);
             ServiceProvider = serviceCollection.BuildServiceProvider()!;
+
+            // Registra o manipulador para FirstChanceException
+            AppDomain.CurrentDomain.FirstChanceException += CurrentDomain_FirstChanceException;
+        }
+
+        private void CurrentDomain_FirstChanceException(object? sender, System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs e)
+        {
+            // Log de todas as exceções antes que sejam tratadas
+            LogService.LogDebug($"FirstChanceException: {e.Exception.GetType().Name} - {e.Exception.Message}");
+            // Opcional: Logar o StackTrace completo para depuração
+            // LogService.LogDebug($"StackTrace: {e.Exception.StackTrace}");
         }
 
         private void ConfigureServices(IServiceCollection services)
         {
+            // Initialize LibVLCSharp Core
+            // LibVLCSharp.Shared.Core.Initialize();
+
             // Register services
             services.AddSingleton<IWindowManager>(provider => new WindowManager(provider));
             services.AddSingleton<IPersistenceService, PersistenceService>();
-            services.AddSingleton<IMediaPlayerService>(provider =>
-                MpvPlayerService.GetInstance(
-                    provider.GetRequiredService<IWindowManager>(),
-                    provider.GetRequiredService<IPersistenceService>(),
-                    () => ConfigManager.Carregar() // Usar ConfigManager.Carregar() para obter Configuracoes
-                ));
+            services.AddSingleton<IMediaPlayerService, EmbeddedVlcPlayerUIService>();
             services.AddSingleton<ITreeViewDataService>(provider =>
                 new TreeViewDataService(
                     provider.GetRequiredService<IWindowManager>(),
@@ -38,6 +48,7 @@ namespace GerenciadorAulas
                     () => ConfigManager.Carregar() // Fornece a implementação para Func<Configuracoes>
                 ));
             services.AddSingleton<ICloudStorageService, GoogleDriveService>();
+            services.AddSingleton<Func<Configuracoes>>(() => ConfigManager.Carregar());
 
             // Register ViewModels
             services.AddTransient<MainWindowViewModel>();
@@ -75,8 +86,18 @@ namespace GerenciadorAulas
             // Configura o tratador de exceções para todas as outras threads
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-            var mainWindow = ServiceProvider!.GetRequiredService<MainWindow>();
-            mainWindow.Show();
+            try
+            {
+                var mainWindow = ServiceProvider!.GetRequiredService<MainWindow>();
+                mainWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                LogService.LogError("Erro fatal ao iniciar a MainWindow.", ex);
+                MessageBox.Show($"Ocorreu um erro fatal ao iniciar a aplicação: {ex.Message}\n\nConsulte os logs para mais detalhes.",
+                                "Erro Fatal", MessageBoxButton.OK, MessageBoxImage.Error);
+                Application.Current.Shutdown();
+            }
         }
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

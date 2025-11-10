@@ -5,6 +5,8 @@
     xmlns:models="clr-namespace:GerenciadorAulas.Models"
     xmlns:converters="clr-namespace:GerenciadorAulas.Converters"
     xmlns:helpers="clr-namespace:GerenciadorAulas.Helpers"
+
+    xmlns:libvlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
     Title="Gerenciador de Aulas 2.0"
     Height="720" Width="900"
     Background="{StaticResource BackgroundColor}" Foreground="{StaticResource ForegroundColor}"
@@ -19,6 +21,7 @@
     <Window.Resources>
 
         <converters:BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
+        <converters:VolumeToIconConverter x:Key="VolumeToIconConverter" />
 
         <converters:AlternatingRowBrushConverter x:Key="ZebraConverter" Brush1="{StaticResource AlternateRowBrush1}" Brush2="{StaticResource AlternateRowBrush2}"/>
 
@@ -74,14 +77,6 @@
 
                     <Button x:Name="BtnSelectFolder" Command="{Binding BrowseFoldersCommand}" ToolTip="Selecionar Pasta" Style="{StaticResource ToolBarButton}">
                         <Image Source="pack://application:,,,/Resources/folder.png" Stretch="Uniform"/>
-                    </Button>
-
-                    <Button Command="{Binding PlaySelectedItemCommand}" CommandParameter="{Binding SelectedItem, ElementName=treeModules}" ToolTip="Reproduzir Item Selecionado" Style="{StaticResource ToolBarButton}">
-                        <Image Source="pack://application:,,,/Resources/play.png" Stretch="Uniform"/>
-                    </Button>
-
-                    <Button x:Name="BtnStop" Command="{Binding StopPlaybackCommand}" ToolTip="Parar Reprodução" Style="{StaticResource ToolBarButton}">
-                        <Image Source="pack://application:,,,/Resources/stop.png" Stretch="Uniform"/>
                     </Button>
 
                     <Button Command="{Binding RefreshListCommand}" ToolTip="Atualizar Lista" Style="{StaticResource ToolBarButton}">
@@ -225,6 +220,46 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+                    </Grid>
+                </TabItem>
+                <TabItem Header="Player">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <libvlc:VideoView x:Name="VideoView" Grid.Row="0" Background="Black" />
+
+                        <!-- Controles do Player -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5,0,5,0">
+                            <Button Command="{Binding PlayPauseCommand}" ToolTip="Play/Pause" Style="{StaticResource ToolBarButton}">
+                                <Image Stretch="Uniform">
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Setter Property="Source" Value="pack://application:,,,/Resources/play.png"/> <!-- Default source -->
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                    <Setter Property="Source" Value="pack://application:,,,/Resources/pause.png"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsPlaying}" Value="False">
+                                                    <Setter Property="Source" Value="pack://application:,,,/Resources/play.png"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                            </Button>
+                                <Button Command="{Binding StopPlayerCommand}" ToolTip="Parar" Style="{StaticResource ToolBarButton}">
+                                    <Image Source="pack://application:,,,/Resources/stop.png" Stretch="Uniform"/>
+                                </Button>
+                                <!-- Controles de Volume -->
+                                <Button Command="{Binding ToggleMuteCommand}" ToolTip="Mudo" Style="{StaticResource ToolBarButton}">
+                                    <Image Source="pack://application:,,,/Resources/mute.png" Stretch="Uniform"/>
+                                </Button>
+                                <Image Source="{Binding Volume, Converter={StaticResource VolumeToIconConverter}}" Width="28" Height="28" Margin="10,0,5,0" VerticalAlignment="Center"/>
+                                <Slider Width="100" Minimum="0" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" VerticalAlignment="Center"/>
+                            </StackPanel>
                     </Grid>
                 </TabItem>
             </TabControl>
