@@ -113,9 +113,14 @@ O progresso é rastreado de duas formas principais:
 
 Os controles de mídia na barra de ferramentas e através de menus de contexto permitem gerenciar a reprodução de vídeos:
 
-| Botão | Função | Comportamento |
+| Botão/Controle | Função | Comportamento |
 | :--- | :--- | :--- |
-| **Play** | Iniciar / Tocar | Se um vídeo estiver selecionado, ele toca. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. **A reprodução contínua avançará automaticamente para o próximo vídeo não assistido na sequência, se ativada nas configurações.** |
+| **Play/Pause** | Iniciar / Pausar | Inicia a reprodução do vídeo selecionado ou pausa/retoma o vídeo atual. Se uma pasta estiver selecionada, toca o **primeiro vídeo não assistido** dentro dela. **A reprodução contínua avançará automaticamente para o próximo vídeo não assistido na sequência, se ativada nas configurações.** |
+| **Stop** | Parar Reprodução | Para completamente a reprodução do vídeo. |
+| **Próximo** | Próximo Vídeo | Avança para o próximo vídeo na playlist. |
+| **Anterior** | Vídeo Anterior | Volta para o vídeo anterior na playlist. |
+| **Mute** | Silenciar / Ativar Som | Alterna o áudio entre silenciado e o volume anterior. |
+| **Controle de Volume (Slider/Ícone)** | Ajustar Volume | Permite ajustar o nível de volume do player de mídia. O ícone muda para refletir o nível de volume atual. |
 | **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
 
 * **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
@@ -126,7 +131,6 @@ A janela de configurações, acessada pelo ícone de engrenagem na barra de ferr
 
 1.  **Aba "Geral":**
     *   **Reprodução Contínua:** Marque esta opção se desejar que o sistema inicie o próximo vídeo automaticamente **após a conclusão do vídeo atual**.
-    *   **Tela Cheia (Fullscreen):** Marque para que o player de vídeo sempre inicie em modo tela cheia.
     *   **Minimizar para Bandeja:** Altera o comportamento do botão de fechar para minimizar a aplicação para a bandeja do sistema.
 
 ### 2.5. Funcionalidades Adicionais
@@ -134,17 +138,33 @@ A janela de configurações, acessada pelo ícone de engrenagem na barra de ferr
 #### 2.5.1. Melhorias na Interação com a TreeView
 
 *   **Seleção Múltipla:** Agora é possível selecionar múltiplos itens na `TreeView` utilizando a tecla `Ctrl`.
-*   **Botões "Marcar Selecionados" e "Desmarcar Selecionados":** Dois novos botões foram adicionados na parte superior da `TreeView` para marcar ou desmarcar rapidamente todos os itens atualmente selecionados.
+
 *   **Dicas de Ferramenta (Tooltips):** Todos os botões da interface agora exibem uma dica de ferramenta ao passar o mouse, descrevendo sua função.
-*   **Remoção do Menu de Contexto "Marcar Selecionados":** Devido a problemas de funcionalidade, a opção "Marcar Selecionados" foi removida do menu de contexto da `TreeView`. A funcionalidade equivalente está disponível através do botão dedicado.
+
 
 #### Minimizar para a Bandeja
 
 Quando a opção "Minimizar para bandeja ao fechar" está ativada nas configurações, o comportamento do botão de fechar da janela principal é alterado. Ao invés de fechar a aplicação, a janela será escondida e um ícone será exibido na bandeja do sistema (próximo ao relógio).
 
+#### 2.5.2. Persistência da Janela
+
+A aplicação agora salva e restaura automaticamente o tamanho, a posição e o estado (normal, minimizado, maximizado) da janela principal entre as sessões. Isso garante que a interface do usuário sempre retorne ao estado em que foi deixada.
+
+#### 2.5.3. Barra de Progresso e Busca de Vídeo
+
+O player de vídeo agora inclui uma barra de progresso interativa que permite ao usuário:
+
+*   **Visualizar o tempo atual e total** do vídeo em formato HH:MM:SS.
+*   **Arrastar o slider** para buscar rapidamente para qualquer ponto do vídeo.
+*   A barra de progresso é atualizada em tempo real durante a reprodução.
+
 #### Menu de Contexto da Bandeja
 
 Ao clicar com o botão direito no ícone do Gerenciador de Aulas na bandeja do sistema, um menu de contexto será exibido com as seguintes opções:
+
+#### 2.5.4. Janela de Progresso da Pasta
+
+Esta janela auxiliar é utilizada para exibir o progresso detalhado de uma pasta específica, mostrando seu nome e uma barra de progresso visual que reflete a porcentagem de vídeos assistidos dentro dela. É útil para acompanhar o andamento de módulos ou cursos individuais.
 
 *   **Restaurar:** Torna a janela principal do aplicativo visível novamente.
 *   **Fechar:** Encerra completamente a aplicação.
@@ -174,9 +194,9 @@ A aplicação segue rigorosamente o padrão **Model-View-ViewModel (MVVM)**, gar
 
 | Componente | Classes Relacionadas | Responsabilidade |
 | :--- | :--- | :--- |
-| **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
-| **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`) e os dados de configuração. |
-| **View** | `Views/MainWindow.xaml`, `Views/ConfigWindow.xaml`, `Views/CloudBackupWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
+| **ViewModel** | `ViewModels/MainWindowViewModel.cs`, `ViewModels/CloudBackupViewModel.cs`, `ViewModels/ViewModelBase.cs` | Contém toda a lógica de negócio, comandos, gerenciamento de estado e preparação dos dados para a View. É a camada de comunicação entre a View e o Model. |
+| **Model** | `Models/VideoItem.cs`, `Models/FolderItem.cs`, `Models/CloudFile.cs`, `Configuracoes.cs` | Estruturas de dados que representam a hierarquia de arquivos (`VideoItem`, `FolderItem`), arquivos na nuvem (`CloudFile`) e os dados de configuração. |
+| **View** | `App.xaml`, `Views/MainWindow.xaml`, `Views/ConfigWindow.xaml`, `Views/CloudBackupWindow.xaml`, `Views/ProgressWindow.xaml` | Responsável pela interface gráfica, pelo *Data Binding* e pela manipulação de eventos de UI, como *Drag & Drop*. |
 | **Services** | `Services/IWindowManager.cs`, `Services/IPersistenceService.cs`, `Services/IMediaPlayerService.cs`, `Services/ITreeViewDataService.cs`, `Services/LogService.cs`, `Services/EmbeddedVlcPlayerUIService.cs` | Abstrai dependências externas, facilitando a injeção de dependência e a testabilidade. |
 
 ### 3.2. Estrutura de Pastas
@@ -204,20 +224,48 @@ As seguintes propriedades notificam a UI sobre mudanças de estado:
 | Propriedade | Tipo | Uso |
 | :--- | :--- | :--- |
 | `TreeRoot` | `ObservableCollection<object>` | A fonte de dados principal para a `TreeView`, gerenciada pelo `ITreeViewDataService`. |
-| `Configuracoes` | `Configuracoes` | Opções do aplicativo (ex: caminho do MPV, tela cheia, reprodução contínua). |
+| `FolderProgressList` | `ObservableCollection<FolderProgressItem>` | Lista de pastas raiz com seu progresso de vídeos assistidos. |
+| `Configuracoes` | `Configuracoes` | Opções do aplicativo, incluindo `ReproducaoContinua`, `MinimizeToTray`, `WindowLeft`, `WindowTop`, `WindowWidth`, `WindowHeight`, `WindowState`, `PastaPadrao`, `LogDirectory` e `VideoExtensions`. |
 | `VideoAtual` | `string` | Exibe o nome do vídeo que está em reprodução. |
+| `ProgressoGeral` | `double` | Progresso geral de vídeos assistidos em todas as pastas. |
 | `IsManuallyStopped` | `bool` | Flag para indicar se a reprodução foi interrompida pelo usuário. |
-| `IsLoading` | `bool` | Indica que uma operação longa (como I/O de arquivos) está em andando. |
+| `IsLoading` | `bool` | Indica que uma operação longa (como I/O de arquivos) está em andamento. |
+| `IsDragging` | `bool` | Indica se um item está sendo arrastado para a aplicação. |
+| `SelectedItems` | `ObservableCollection<object>` | Coleção de itens atualmente selecionados na `TreeView`. |
+| `TotalFolders` | `int` | Número total de pastas raiz na `TreeView`. |
+| `TotalVideos` | `int` | Número total de vídeos em todas as pastas. |
+| `Volume` | `int` | Volume atual do player de mídia (0-100). |
+| `IsPlaying` | `bool` | Indica se o player de mídia está atualmente reproduzindo. |
+| `CurrentTime` | `long` | Tempo atual de reprodução do vídeo em milissegundos. |
+| `TotalTime` | `long` | Duração total do vídeo em milissegundos. |
+| `PlaybackPosition` | `float` | Posição de reprodução do vídeo como uma fração (0.0f a 1.0f). |
+| `IsSeeking` | `bool` | Indica se o usuário está arrastando o slider de busca do vídeo. |
 
 ### 4.2. Comandos Principais
 
 | Comando | Função |
 | :--- | :--- |
-| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o **primeiro vídeo não assistido** dentro dela. **Este comando agora inicia uma playlist de reprodução contínua dos vídeos subsequentes não assistidos.** Este comando é assíncrono. |
+| `PlayPauseCommand` | Inicia/pausa a reprodução do vídeo. |
+| `StopPlayerCommand` | Para a reprodução do vídeo. |
+| `ToggleMuteCommand` | Alterna o estado de mudo do player. |
+| `PlayVideoCommand` | Reproduz um vídeo específico. |
+| `PlaySelectedItemCommand` | Toca o item selecionado. Se for um vídeo, toca-o. Se for uma pasta, inicia o **primeiro vídeo não assistido** dentro dela. **Este comando agora inicia uma playlist de reprodução contínua dos vídeos subsequentes não assistidos.** Este comando é assínrono. |
+| `PlayNextCommand` | Avança para o próximo vídeo na playlist. |
+| `PlayPreviousCommand` | Volta para o vídeo anterior na playlist. |
+| `StartSeekCommand` | Inicia o processo de busca (arrastar o slider). |
+| `EndSeekCommand` | Finaliza o processo de busca. |
+| `SeekCommand` | Realiza a busca para uma posição específica no vídeo. |
 | `AddFoldersCommand` | Lida com a adição assíncrona de novas pastas/arquivos de vídeo via *Drag & Drop* ou diálogo de seleção. |
 | `RefreshListCommand` | Recarrega a estrutura da `TreeView` (via `ITreeViewDataService`) e restaura o estado de progresso salvo no disco. |
 | `ClearSelectedFolderCommand` | Remove uma pasta raiz (e seu estado de progresso) do rastreamento do aplicativo (via `ITreeViewDataService`). |
 | `BrowseFoldersCommand` | Abre um diálogo para selecionar pastas e as adiciona assincronamente. |
+| `MarkSelectedCommand` | Marca todos os itens selecionados na `TreeView` como assistidos. |
+| `UnmarkSelectedCommand` | Desmarca todos os itens selecionados na `TreeView` como não assistidos. |
+| `OpenConfigCommand` | Abre a janela de configurações. |
+| `BackupCommand` | Realiza um backup local dos dados da aplicação. |
+| `RestoreCommand` | Restaura os dados da aplicação a partir de um backup local. |
+| `BackupToCloudCommand` | Realiza um backup dos dados da aplicação para o Google Drive. |
+| `RestoreFromCloudCommand` | Restaura os dados da aplicação a partir de um backup do Google Drive. |
 
 ### 4.3. Mecanismo de Reprodução de Mídia (via `IMediaPlayerService`)
 
@@ -230,7 +278,7 @@ A reprodução de mídia agora é abstraída através da interface `IMediaPlayer
 
 ## 5. Gerenciamento e Persistência de Estado
 
-O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões. Toda a lógica de leitura e escrita de arquivos é centralizada no `IPersistenceService`, que é utilizado pelo `ITreeViewDataService` para gerenciar o estado da `TreeView` e os vídeos assistidos.
+O estado do aplicativo é salvo em arquivos JSON na pasta de dados da aplicação (`AppData\GerenciadorAulas`), garantindo que o progresso do usuário seja mantido entre as sessões. O `ConfigManager` é responsável por gerenciar as configurações do aplicativo, enquanto a lógica de leitura e escrita de outros dados é centralizada no `IPersistenceService`, que é utilizado pelo `ITreeViewDataService` para gerenciar o estado da `TreeView` e os vídeos assistidos.
 
 ### 5.1. Arquivos de Persistência
 
@@ -299,7 +347,7 @@ Esta nova interface abstrai a funcionalidade de reprodução de mídia, permitin
 
 
 
-*   A interface `IMediaPlayerService` define métodos como `PlayAsync` e `Stop` para controlar a reprodução.
+*   A interface `IMediaPlayerService` define métodos como `PlayAsync`, `PlayPause`, `Stop`, `ToggleMute`, `VolumeUp`, `VolumeDown`, `SetPlaylistAndPlayAsync`, `PlayNext`, `PlayPrevious` e propriedades como `MediaPlayer`, `Volume`, `Length`, `Time`, `Position`, `IsPlaying`, `HasNext`, `HasPrevious`, além de eventos como `IsPlayingChanged` e `VideoEnded` para controlar a reprodução e notificar sobre o estado do player.
 
 *   A implementação `EmbeddedVlcPlayerUIService` utiliza `LibVLCSharp` para um player de vídeo embutido, encapsulando a lógica de inicialização e controle.
 
@@ -315,7 +363,7 @@ Esta nova interface centraliza toda a lógica de gerenciamento e manipulação d
 
 
 
-*   A interface `ITreeViewDataService` expõe a coleção `TreeRoot` e métodos para manipular a estrutura de pastas e vídeos, como `AddFolderOrVideo`, `RemoveFolder`, `LoadInitialTree`, `GetNextUnwatchedVideo`, `ContarVideos`, `AtualizarNomeComProgresso`, etc.
+*   A interface `ITreeViewDataService` expõe a coleção `TreeRoot` e métodos para manipular a estrutura de pastas e vídeos, como `AddFolderOrVideo`, `RemoveFolder`, `LoadInitialTree`, `GetAllVideosRecursive`, `GetVideosRecursive`, `GetNextUnwatchedVideo`, `SaveTreeViewEstado`, `CarregarEstadoTreeView`, `CarregarEstadoVideosAssistidos`, `SalvarEstadoVideosAssistidos`, `AtualizarCheckboxFolder`, `AtualizarPais`, `ContarVideos`, `AtualizarNomeComProgresso`, `GetAllVideosFromPersistedState`, `GetVideoItemByPath`.
 
 *   A implementação `TreeViewDataService` lida com a leitura do sistema de arquivos, a criação dos `FolderItem` e `VideoItem`, e a interação com o `IPersistenceService` para salvar e carregar o estado da `TreeView` e dos vídeos assistidos.
 
