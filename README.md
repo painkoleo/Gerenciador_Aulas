@@ -83,6 +83,21 @@ Para configurar o ambiente de desenvolvimento e executar o projeto, siga os pass
 
 ---
 
+### 1.3. Novas Funcionalidades e Melhorias
+
+Esta versão traz uma série de aprimoramentos focados na experiência do usuário e na performance:
+
+*   **Aba de Progresso Aprimorada:**
+    *   A visualização do progresso agora é apresentada em uma `TreeView` hierárquica na aba "Progresso", permitindo uma visão clara do status de cada pasta e subpasta.
+    *   Implementado carregamento preguiçoso (lazy loading): os dados de progresso são calculados somente quando a aba "Progresso" é selecionada, garantindo que a UI principal permaneça responsiva.
+    *   Por padrão, os itens na `TreeView` de progresso iniciam recolhidos para uma visão mais limpa.
+*   **Controle de Reprodução Otimizado:**
+    *   **Transição Automática:** Ao iniciar a reprodução de um vídeo (seja clicando diretamente ou via menu de contexto), o aplicativo agora alterna automaticamente para a aba "Player".
+    *   **Retorno Pós-Parada:** Ao parar a reprodução de um vídeo (botão "Stop"), a aplicação retorna automaticamente para a aba "Aulas".
+    *   **Navegação Rápida:** Adicionado um botão "Próximo Vídeo" (`next.png`) aos controles do player para facilitar a navegação na playlist.
+
+---
+
 ## 2. Guia do Usuário: Como Usar o Gerenciador de Aulas
 
 Esta seção explica as principais funcionalidades do aplicativo e como o usuário pode interagir com o sistema para gerenciar suas coleções de vídeos.
@@ -105,9 +120,17 @@ O progresso é rastreado de duas formas principais:
     *   **Progresso em Pasta:** Quando um vídeo é marcado/desmarcado, o sistema propaga a mudança para a pasta pai, atualizando o progresso exibido no nome da pasta (ex: `Módulo 1 (5/10)`).
     *   **Checkbox Indeterminada:** Se uma pasta contém alguns vídeos assistidos e outros não, a checkbox da pasta ficará em um **estado misto (hífen)**.
 
-2.  **Na Aba "Progresso":**
+2.
+
+    **Na Aba "Progresso":**
+
     *   A janela principal agora possui uma aba dedicada chamada **"Progresso"**.
-    *   Esta aba exibe uma lista de todas as pastas raiz adicionadas, cada uma com uma barra de progresso visual que representa a porcentagem de vídeos assistidos naquela pasta. Isso oferece uma visão geral e rápida do andamento em todos os seus cursos.
+
+    *   Esta aba exibe uma **visão hierárquica em árvore (`TreeView`)** de todas as pastas raiz adicionadas e suas subpastas. Cada item na árvore apresenta uma barra de progresso visual que representa a porcentagem de vídeos assistidos dentro daquela pasta ou subpasta.
+
+    *   Por padrão, os nós da árvore iniciam **recolhidos** para uma melhor organização.
+
+    *   O conteúdo desta aba é carregado de forma **"preguiçosa" (lazy-loaded)**: os cálculos de progresso são realizados apenas na primeira vez que a aba é acessada, garantindo uma interface mais responsiva.
 
 ### 2.3. Controles de Reprodução
 
@@ -123,7 +146,7 @@ Os controles de mídia na barra de ferramentas e através de menus de contexto p
 | **Controle de Volume (Slider/Ícone)** | Ajustar Volume | Permite ajustar o nível de volume do player de mídia. O ícone muda para refletir o nível de volume atual. |
 | **Atualizar** | Recarregar Lista | Recarrega toda a estrutura de pastas e vídeos, restaurando o estado de progresso salvo no disco. Use se houver mudanças nos arquivos externos. |
 
-* **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado.
+*   **Menu de Contexto (Play):** Clique com o botão direito em qualquer pasta ou vídeo na lista para abrir um menu de contexto com a opção "Play". Esta é uma forma rápida de iniciar a reprodução do item desejado. **Após a seleção, o aplicativo mudará automaticamente para a aba "Player" para exibir a reprodução.**
 
 ### 2.4. Configurações
 
@@ -162,9 +185,7 @@ O player de vídeo agora inclui uma barra de progresso interativa que permite ao
 
 Ao clicar com o botão direito no ícone do Gerenciador de Aulas na bandeja do sistema, um menu de contexto será exibido com as seguintes opções:
 
-#### 2.5.4. Janela de Progresso da Pasta
 
-Esta janela auxiliar é utilizada para exibir o progresso detalhado de uma pasta específica, mostrando seu nome e uma barra de progresso visual que reflete a porcentagem de vídeos assistidos dentro dela. É útil para acompanhar o andamento de módulos ou cursos individuais.
 
 *   **Restaurar:** Torna a janela principal do aplicativo visível novamente.
 *   **Fechar:** Encerra completamente a aplicação.
