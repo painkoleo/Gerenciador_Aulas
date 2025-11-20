@@ -1,0 +1,8 @@
+# IDE and build artifacts
+[Bb]in/
+[Oo]bj/
+*.json
+client_secret.json
+# Log files
+logs/
+

@@ -1,0 +1,31 @@
+<Window x:Class="GerenciadorAulas.Views.ProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Progresso da Pasta" Height="150" Width="400"
+        Background="#1e1e1e" Foreground="White"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="{Binding DisplayName}"
+                   FontSize="16" FontWeight="Bold"
+                   Foreground="White" Margin="0,0,0,10"/>
+
+        <Border Grid.Row="1" CornerRadius="8" Background="#2a2a2a" Height="25">
+            <ProgressBar x:Name="progressBarFolder"
+                         Minimum="0" Maximum="100"
+                         Foreground="#0e639c" Background="Transparent"
+                         Height="25" Value="{Binding ProgressPercent}" />
+        </Border>
+
+        <TextBlock Grid.Row="2" Text="{Binding ProgressPercent, StringFormat={}{0:F0}%}"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,10,0,0"/>
+    </Grid>
+</Window>
